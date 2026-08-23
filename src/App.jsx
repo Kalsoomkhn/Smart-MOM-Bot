@@ -136,6 +136,15 @@ export default function App() {
     }
   }
 
+  function startNewMeeting() {
+    if (user.role !== 'organizer') {
+      setNotice('Only Organizer accounts can create a new meeting. Sign in as an Organizer to upload or record audio.')
+      return
+    }
+    setNavView('workspace')
+    fileInput.current?.click()
+  }
+
   async function recordAudio() {
     if (recording) {
       recorder.current.stop()
@@ -277,7 +286,7 @@ export default function App() {
             <small>AI Meeting Minutes</small>
           </div>
         </div>
-        <button className="primary-action" onClick={() => { setNavView('workspace'); fileInput.current?.click() }} disabled={user.role !== 'organizer'}>
+        <button className="primary-action" onClick={startNewMeeting}>
           <Plus size={18} /> New meeting
         </button>
         <input ref={fileInput} hidden type="file" accept="audio/mpeg,audio/wav,audio/mp4,audio/ogg,audio/webm" onChange={(event) => uploadAudio(event.target.files[0])} />
@@ -315,7 +324,7 @@ export default function App() {
         ) : navView === 'review' ? (
           <MeetingDirectory title="Review queue" subtitle="Meetings that still need transcript, AI review, or final approval." meetings={meetings.filter((meeting) => meeting.status !== 'saved')} onOpen={(meeting) => { setSelected(meeting.id); setNavView('workspace') }} emptyMessage="Everything is reviewed. Your queue is clear." />
         ) : !current ? (
-          <EmptyState user={user} upload={() => fileInput.current?.click()} />
+          <EmptyState user={user} upload={startNewMeeting} />
         ) : (
           <>
             <WorkspaceHeader current={current} isOrganizer={isOrganizer} saveSummary={saveSummary} exportPdf={exportPdf} />
