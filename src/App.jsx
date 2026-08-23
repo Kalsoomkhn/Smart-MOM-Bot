@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Bot,
   CalendarClock,
@@ -27,18 +27,24 @@ import './App.css'
 
 const emptySummary = { agenda: [], decisions: [], discussion: [], actions: [] }
 const tabs = ['Minutes', 'Transcript', 'Insights', 'People']
+const demoCredentials = { email: 'admin@smartmom.test', password: 'Admin@12345' }
 
 async function api(path, opts = {}) {
   const token = localStorage.getItem('smartmom_token')
-  const response = await fetch(`/api${path}`, {
-    ...opts,
-    headers: {
-      ...(opts.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
-      ...(token ? { Authorization: `Bearer ${token}` } : {})
-    }
-  })
+  let response
+  try {
+    response = await fetch(`/api${path}`, {
+      ...opts,
+      headers: {
+        ...(opts.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      }
+    })
+  } catch {
+    throw Error('Cannot reach the SmartMOM server. Check that the API is running and try again.')
+  }
   const data = response.headers.get('content-type')?.includes('json') ? await response.json() : null
-  if (!response.ok) throw Error(data?.error || 'Request failed.')
+  if (!response.ok) throw Error(data?.error || `Request failed with status ${response.status}.`)
   return data
 }
 
@@ -71,36 +77,39 @@ export default function App() {
   const current = meetings.find((meeting) => meeting.id === selected)
   const isOrganizer = current?.access_role === 'organizer'
 
-  async function loadMeetings(selectFirst = false) {
+  const loadMeetings = useCallback(async (selectFirst = false) => {
     try {
       const data = await api('/meetings')
       setMeetings(data)
-      if ((selectFirst || !selected) && data[0]) setSelected(data[0].id)
-      if (selected && !data.some((meeting) => meeting.id === selected)) setSelected(data[0]?.id)
+      setSelected((previous) => {
+        if ((selectFirst || !previous) && data[0]) return data[0].id
+        if (previous && !data.some((meeting) => meeting.id === previous)) return data[0]?.id
+        return previous
+      })
     } catch (error) {
       setNotice(error.message)
     }
-  }
+  }, [])
 
-  async function loadParticipants(meetingId) {
+  const loadParticipants = useCallback(async (meetingId) => {
     if (!meetingId) return
     try {
       setParticipants(await api(`/meetings/${meetingId}/participants`))
     } catch (error) {
       setNotice(error.message)
     }
-  }
+  }, [])
 
   useEffect(() => {
     if (user) loadMeetings(true)
-  }, [user])
+  }, [user, loadMeetings])
 
   useEffect(() => {
     if (!current) return
     setTranscript(current.transcript || '')
     setSummary(current.summary || emptySummary)
     loadParticipants(current.id)
-  }, [current?.id])
+  }, [current, loadParticipants])
 
   async function authenticate(event) {
     event.preventDefault()
@@ -120,6 +129,7 @@ export default function App() {
   async function uploadAudio(file) {
     if (!file) return
     if (file.size > 200 * 1024 * 1024) return setNotice('Audio files must be below 200 MB.')
+    if (!file.type.startsWith('audio/')) return setNotice('Please choose a supported audio file.')
     setBusy(true)
     try {
       const form = new FormData()
@@ -138,7 +148,7 @@ export default function App() {
 
   function startNewMeeting() {
     if (user.role !== 'organizer') {
-      setNotice('Your current account role is Participant. Use “Switch to Organizer” in the profile area, then try again.')
+      setNotice('Your current account role is Participant. Use "Switch to Organizer" in the profile area, then try again.')
       return
     }
     setNavView('workspace')
@@ -182,17 +192,20 @@ export default function App() {
 
   async function saveTranscript() {
     if (!current || !isOrganizer) return
+    if (!transcript.trim()) return setNotice('Transcript cannot be empty.')
     await api(`/meetings/${selected}/transcript`, { method: 'PUT', body: JSON.stringify({ transcript }) })
     await loadMeetings()
   }
 
   async function transcribeMeeting() {
+    if (!current) return setNotice('Select a meeting before transcription.')
+    if (!isOrganizer) return setNotice('Only an Organizer can transcribe meeting audio.')
     setBusy(true)
     try {
       const data = await api(`/meetings/${selected}/transcribe`, { method: 'POST' })
       setTranscript(data.text)
       await loadMeetings()
-      setNotice('Transcription complete. Review speaker labels before AI analysis.')
+      setNotice(data.mode === 'demo' ? 'Demo transcript generated because OPENAI_API_KEY is not configured. Review it, then generate minutes.' : 'Transcription complete. Review speaker labels before AI analysis.')
     } catch (error) {
       setNotice(error.message)
     } finally {
@@ -201,6 +214,9 @@ export default function App() {
   }
 
   async function analyzeMeeting() {
+    if (!current) return setNotice('Select a meeting before AI analysis.')
+    if (!isOrganizer) return setNotice('Only an Organizer can generate meeting analysis.')
+    if (!transcript.trim()) return setNotice('Add or transcribe a meeting transcript before AI analysis.')
     setBusy(true)
     try {
       await saveTranscript()
@@ -208,7 +224,7 @@ export default function App() {
       setSummary(data.summary)
       await loadMeetings()
       setActiveTab('Minutes')
-      setNotice('AI minutes, decisions, action items, sentiment, and engagement are ready for review.')
+      setNotice(data.mode === 'demo' ? 'Demo minutes generated without an OpenAI key. Add OPENAI_API_KEY for real audio transcription and analysis.' : 'AI minutes, decisions, action items, sentiment, and engagement are ready for review.')
     } catch (error) {
       setNotice(error.message)
     } finally {
@@ -217,7 +233,8 @@ export default function App() {
   }
 
   async function saveSummary() {
-    if (!isOrganizer) return
+    if (!current) return setNotice('Select a meeting before saving minutes.')
+    if (!isOrganizer) return setNotice('Only an Organizer can save meeting minutes.')
     try {
       await api(`/meetings/${selected}/summary`, { method: 'PUT', body: JSON.stringify({ summary }) })
       await loadMeetings()
@@ -228,6 +245,8 @@ export default function App() {
   }
 
   async function deleteMeeting() {
+    if (!current) return setNotice('Select a meeting before deleting it.')
+    if (!isOrganizer) return setNotice('Only an Organizer can delete a meeting.')
     if (!confirm('Permanently delete this meeting, audio, minutes, versions, and feedback?')) return
     try {
       await api(`/meetings/${selected}`, { method: 'DELETE' })
@@ -240,6 +259,7 @@ export default function App() {
   }
 
   async function exportPdf() {
+    if (!current) return setNotice('Select a meeting before exporting PDF minutes.')
     try {
       const response = await fetch(`/api/meetings/${selected}/export.pdf`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('smartmom_token')}` }
@@ -258,6 +278,9 @@ export default function App() {
 
   async function inviteParticipant(event) {
     event.preventDefault()
+    if (!current) return setNotice('Select a meeting before inviting participants.')
+    if (!isOrganizer) return setNotice('Only an Organizer can invite participants.')
+    if (!inviteEmail.trim()) return setNotice('Enter at least one registered participant email.')
     try {
       const data = await api(`/meetings/${selected}/participants`, { method: 'POST', body: JSON.stringify({ email: inviteEmail }) })
       await loadParticipants(selected)
@@ -269,6 +292,8 @@ export default function App() {
   }
 
   async function sendFeedback() {
+    if (!current) return setNotice('Select a meeting before submitting feedback.')
+    if (!Number.isInteger(rating) || rating < 1) return setNotice('Choose a rating from 1 to 5 before submitting feedback.')
     try {
       await api(`/meetings/${selected}/feedback`, { method: 'POST', body: JSON.stringify({ rating, comment: feedback }) })
       setRating(0)
@@ -282,6 +307,12 @@ export default function App() {
   const filteredMeetings = useMemo(() => {
     return meetings.filter((meeting) => `${meeting.title} ${meeting.status} ${meeting.transcript || ''}`.toLowerCase().includes(query.toLowerCase()))
   }, [meetings, query])
+  const dashboardStats = useMemo(() => {
+    const reviewed = meetings.filter((meeting) => meeting.status === 'saved').length
+    const pending = meetings.filter((meeting) => meeting.status !== 'saved').length
+    const actions = meetings.reduce((total, meeting) => total + (meeting.summary?.actions?.filter((action) => action.task)?.length || 0), 0)
+    return { reviewed, pending, actions }
+  }, [meetings])
 
   if (!user) {
     return <AuthScreen mode={mode} setMode={setMode} authRole={authRole} setAuthRole={setAuthRole} authenticate={authenticate} notice={notice} />
@@ -331,6 +362,7 @@ export default function App() {
 
       <main className="workspace">
         {notice && <div className="notice"><span>{notice}</span><button onClick={() => setNotice('')}>Dismiss</button></div>}
+        <DashboardStrip user={user} meetings={meetings} stats={dashboardStats} />
         {navView === 'archive' ? (
           <MeetingDirectory title="Minutes archive" subtitle="Browse every meeting record you can access." meetings={meetings} onOpen={(meeting) => { setSelected(meeting.id); setNavView('workspace') }} />
         ) : navView === 'review' ? (
@@ -374,7 +406,47 @@ export default function App() {
   )
 }
 
+function DashboardStrip({ user, meetings, stats }) {
+  const latest = meetings[0]
+  return (
+    <section className="dashboard-strip">
+      <div className="dashboard-copy">
+        <span className="eyebrow">Command center</span>
+        <h1>SmartMOM workspace</h1>
+        <p>{latest ? `Latest record: ${latest.title}` : `Ready for ${user.name} to create the first meeting record.`}</p>
+      </div>
+      <div className="metric-grid">
+        <MetricCard icon={<FileText size={18} />} label="Meetings" value={meetings.length} tone="blue" />
+        <MetricCard icon={<CheckCircle2 size={18} />} label="Reviewed" value={stats.reviewed} tone="green" />
+        <MetricCard icon={<ShieldCheck size={18} />} label="In review" value={stats.pending} tone="amber" />
+        <MetricCard icon={<ChevronRight size={18} />} label="Actions" value={stats.actions} tone="rose" />
+      </div>
+    </section>
+  )
+}
+
+function MetricCard({ icon, label, value, tone }) {
+  return (
+    <div className={`metric-card ${tone}`}>
+      <span>{icon}</span>
+      <strong>{value}</strong>
+      <small>{label}</small>
+    </div>
+  )
+}
+
 function AuthScreen({ mode, setMode, authRole, setAuthRole, authenticate, notice }) {
+  function useDemoAccount() {
+    setMode('login')
+    requestAnimationFrame(() => {
+      const form = document.querySelector('.auth-form')
+      if (!form) return
+      form.email.value = demoCredentials.email
+      form.password.value = demoCredentials.password
+      form.requestSubmit()
+    })
+  }
+
   return (
     <div className="auth-screen">
       <section className="auth-visual">
@@ -394,6 +466,15 @@ function AuthScreen({ mode, setMode, authRole, setAuthRole, authenticate, notice
       <form className="auth-form" onSubmit={authenticate}>
         <span className="eyebrow">{mode === 'login' ? 'Secure sign in' : 'Create workspace account'}</span>
         <h1>{mode === 'login' ? 'Welcome back' : 'Register for SmartMOM'}</h1>
+        {mode === 'login' && (
+          <button className="demo-login" type="button" onClick={useDemoAccount}>
+            <ShieldCheck size={18} />
+            <span>
+              <strong>Use demo organizer</strong>
+              <small>{demoCredentials.email} / {demoCredentials.password}</small>
+            </span>
+          </button>
+        )}
         {mode === 'register' && (
           <>
             <div className="role-switch">
@@ -453,7 +534,7 @@ function WorkspaceHeader({ current, isOrganizer, saveSummary, exportPdf }) {
       <div>
         <span className="eyebrow">Meeting workspace</span>
         <h1>{current.title}</h1>
-        <p><CalendarClock size={15} /> {new Date(current.created_at).toLocaleString()} <span>{current.access_role}</span></p>
+        <p><CalendarClock size={15} /> {new Date(current.created_at).toLocaleString()} <span>{current.access_role}</span><span>{current.status}</span></p>
       </div>
       <div className="header-actions">
         {isOrganizer && <button onClick={saveSummary}><Save size={17} /> Save</button>}

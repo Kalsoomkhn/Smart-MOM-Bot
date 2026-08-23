@@ -25,7 +25,7 @@ SmartMOM Bot is a professional meeting-intelligence workspace that turns consent
 
 1. Copy `.env.example` to `.env`.
 2. Set strong values for `POSTGRES_PASSWORD` and `JWT_SECRET`.
-3. Add `OPENAI_API_KEY` to enable transcription and AI analysis.
+3. Add `OPENAI_API_KEY` to enable real OpenAI transcription and AI analysis.
 4. Start the application:
 
 ```bash
@@ -39,6 +39,31 @@ To stop the stack while retaining database and uploaded-audio volumes:
 ```bash
 docker compose down
 ```
+
+## Demo and testing
+
+The application seeds demo users and demo meeting records automatically when the API starts.
+
+| Role | Email | Password |
+| --- | --- | --- |
+| Organizer | `admin@smartmom.test` | `Admin@12345` |
+| Participant | `participant@smartmom.test` | `Participant@12345` |
+
+Dummy spoken audio files are included in `dummy-audio/` for manual upload testing:
+
+- `fyp-progress-review.wav`
+- `client-standup.wav`
+- `short-action-items.wav`
+
+Manual workflow:
+
+1. Sign in as the demo Organizer.
+2. Upload one of the dummy audio files with **New meeting** or **Upload**.
+3. Click **Transcribe**.
+4. Click **Analyze**.
+5. Review the generated minutes, insights, participant access, feedback, and PDF export.
+
+If `OPENAI_API_KEY` is not configured, SmartMOM uses a deterministic demo mode so the FYP workflow can still be tested end to end. Add a real API key in `.env` when you want real audio transcription and AI-generated summaries.
 
 ## Local development
 
@@ -80,3 +105,4 @@ The frontend runs on Vite's displayed local URL and proxies API requests to port
 | `npm run dev:full` | Start frontend and API together |
 | `npm run build` | Create the production frontend build |
 | `npm run lint` | Run static linting |
+| `npm test` | Run the Vitest contract checks |

@@ -7,13 +7,15 @@ import bcrypt from 'bcryptjs'
 import fs from 'node:fs'
 import path from 'node:path'
 import { randomUUID } from 'node:crypto'
-import PDFDocument from 'pdfkit'
+import PDFDocument, { registerStdFonts } from 'pdfkit'
+import Helvetica from 'pdfkit/standard-fonts/Helvetica'
 import 'dotenv/config'
 import { pool, migrate, databaseMode } from './db.js'
 import { id, sign, requireAuth } from './auth.js'
 import { transcribe, analyze } from './ai.js'
 
 const app = express()
+registerStdFonts(Helvetica)
 const uploadDir = path.resolve(process.env.UPLOAD_DIR || './uploads')
 fs.mkdirSync(uploadDir, { recursive: true })
 
@@ -35,6 +37,141 @@ app.get('/health', (_req, res) => res.json({ status: 'ok', database: databaseMod
 const asyncRoute = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next)
 const publicUser = (user) => ({ id: user.id, name: user.name, email: user.email, role: user.role || 'organizer' })
 const validRole = (role) => ['organizer', 'participant'].includes(role)
+const demoOrganizer = {
+  id: '11111111-1111-4111-8111-111111111111',
+  name: 'Demo Organizer',
+  email: 'admin@smartmom.test',
+  password: 'Admin@12345'
+}
+const demoParticipant = {
+  id: '22222222-2222-4222-8222-222222222222',
+  name: 'Ayesha Participant',
+  email: 'participant@smartmom.test',
+  password: 'Participant@12345'
+}
+const demoMeetings = [
+  {
+    id: '33333333-3333-4333-8333-333333333333',
+    title: 'FYP Progress Review',
+    status: 'saved',
+    transcript: [
+      'Speaker 1: We reviewed the SmartMOM Bot requirements and confirmed the core workflow.',
+      'Speaker 2: The UI needs to clearly show meeting status, action owners, and summary quality.',
+      'Speaker 1: Kalsoom will prepare the final demo script before the next supervisor review.',
+      'Speaker 2: Usman will verify PDF export, feedback submission, and participant access.'
+    ].join('\n'),
+    summary: {
+      agenda: ['Review FYP requirements', 'Confirm demo workflow', 'Assign final preparation tasks'],
+      decisions: ['Keep SmartMOM focused on AI meeting minutes', 'Use a seeded organizer account for evaluation'],
+      discussion: ['The team compared the implemented app with UC-01 to UC-10 and identified UI polish as the main improvement area.'],
+      actions: [
+        { owner: 'Kalsoom', task: 'Prepare final demo script and screenshots', due: 'Next supervisor meeting' },
+        { owner: 'Usman', task: 'Verify export, feedback, and participant access flows', due: 'Before presentation' }
+      ]
+    },
+    analysis: {
+      overall: 'positive',
+      participants: [
+        { name: 'Kalsoom', sentiment: 'Positive', engagement: 92 },
+        { name: 'Usman', sentiment: 'Neutral', engagement: 84 }
+      ]
+    }
+  },
+  {
+    id: '44444444-4444-4444-8444-444444444444',
+    title: 'Client Requirements Standup',
+    status: 'ready',
+    transcript: [
+      'Speaker 1: Today we need to decide what belongs in the final summary.',
+      'Speaker 2: The client asked for action items, key decisions, and participant feedback.',
+      'Speaker 1: We should save the summary after one manual review.'
+    ].join('\n'),
+    summary: {
+      agenda: ['Review client requests', 'Finalize minutes structure'],
+      decisions: ['Feedback collection remains part of the review workflow'],
+      discussion: ['The meeting focused on how to present extracted key points in a professional format.'],
+      actions: [
+        { owner: 'Demo Organizer', task: 'Review generated summary before saving', due: 'Today' }
+      ]
+    },
+    analysis: {
+      overall: 'neutral',
+      participants: [
+        { name: 'Demo Organizer', sentiment: 'Neutral', engagement: 78 },
+        { name: 'Ayesha Participant', sentiment: 'Positive', engagement: 72 }
+      ]
+    }
+  },
+  {
+    id: '55555555-5555-4555-8555-555555555555',
+    title: 'Transcript Review Queue Sample',
+    status: 'transcribed',
+    transcript: [
+      'Speaker 1: This sample is intentionally transcribed but not analyzed.',
+      'Speaker 2: It helps evaluators test the analyze and save workflow with real text already present.'
+    ].join('\n'),
+    summary: { agenda: [], decisions: [], discussion: [], actions: [] },
+    analysis: {}
+  }
+]
+
+async function upsertDemoUser(user, role) {
+  const passwordHash = await bcrypt.hash(user.password, 12)
+  await pool.query(
+    `INSERT INTO users(id,name,email,role,password_hash)
+     VALUES($1,$2,$3,$4,$5)
+     ON CONFLICT (email) DO UPDATE SET
+      name=EXCLUDED.name,
+      role=EXCLUDED.role,
+      password_hash=EXCLUDED.password_hash`,
+    [user.id, user.name, user.email, role, passwordHash]
+  )
+}
+
+async function seedDemoData() {
+  await upsertDemoUser(demoOrganizer, 'organizer')
+  await upsertDemoUser(demoParticipant, 'participant')
+
+  for (const meeting of demoMeetings) {
+    await pool.query(
+      `INSERT INTO meetings(id,owner_id,title,status,transcript,summary,analysis)
+       VALUES($1,$2,$3,$4,$5,$6,$7)
+       ON CONFLICT (id) DO UPDATE SET
+        title=EXCLUDED.title,
+        status=EXCLUDED.status,
+        transcript=EXCLUDED.transcript,
+        summary=EXCLUDED.summary,
+        analysis=EXCLUDED.analysis,
+        updated_at=now()`,
+      [meeting.id, demoOrganizer.id, meeting.title, meeting.status, meeting.transcript, meeting.summary, meeting.analysis]
+    )
+    await pool.query(
+      `INSERT INTO meeting_members(meeting_id,user_id,access_role)
+       VALUES($1,$2,$3)
+       ON CONFLICT (meeting_id,user_id) DO UPDATE SET access_role=EXCLUDED.access_role`,
+      [meeting.id, demoOrganizer.id, 'organizer']
+    )
+    await pool.query(
+      `INSERT INTO meeting_members(meeting_id,user_id,access_role)
+       VALUES($1,$2,$3)
+       ON CONFLICT (meeting_id,user_id) DO UPDATE SET access_role=EXCLUDED.access_role`,
+      [meeting.id, demoParticipant.id, 'participant']
+    )
+  }
+
+  await pool.query(
+    `INSERT INTO meeting_versions(id,meeting_id,editor_id,summary)
+     VALUES($1,$2,$3,$4)
+     ON CONFLICT (id) DO UPDATE SET summary=EXCLUDED.summary`,
+    ['66666666-6666-4666-8666-666666666666', demoMeetings[0].id, demoOrganizer.id, demoMeetings[0].summary]
+  )
+  await pool.query(
+    `INSERT INTO feedback(id,meeting_id,user_id,rating,comment)
+     VALUES($1,$2,$3,$4,$5)
+     ON CONFLICT (id) DO UPDATE SET rating=EXCLUDED.rating, comment=EXCLUDED.comment`,
+    ['77777777-7777-4777-8777-777777777777', demoMeetings[0].id, demoParticipant.id, 5, 'Clear action items and decisions. Ready for export.']
+  )
+}
 
 async function meetingFor(meetingId, userId) {
   const result = await pool.query(
@@ -61,11 +198,14 @@ app.post('/api/auth/register', asyncRoute(async (req, res) => {
     return res.status(400).json({ error: 'Name, email, and a password of at least 10 characters are required.' })
   }
   if (!validRole(role)) return res.status(400).json({ error: 'Choose either Organizer or Participant.' })
+  const normalizedEmail = email.toLowerCase().trim()
+  const existingUser = await pool.query('SELECT id FROM users WHERE email=$1', [normalizedEmail])
+  if (existingUser.rows[0]) return res.status(409).json({ error: 'This email is already registered. Sign in or use another email.' })
 
   const user = {
     id: id(),
     name: name.trim(),
-    email: email.toLowerCase().trim(),
+    email: normalizedEmail,
     role,
     password_hash: await bcrypt.hash(password, 12)
   }
@@ -172,9 +312,12 @@ app.post('/api/meetings/:id/participants', requireAuth, asyncRoute(async (req, r
 app.post('/api/meetings/:id/transcribe', requireAuth, asyncRoute(async (req, res) => {
   const meeting = await organizerMeeting(req.params.id, req.user.sub)
   if (!meeting) return res.sendStatus(404)
+  if (!meeting.audio_path || !fs.existsSync(meeting.audio_path)) {
+    return res.status(400).json({ error: 'No source audio is available for this meeting. Upload or record audio before transcription.' })
+  }
   await pool.query("UPDATE meetings SET status='transcribing' WHERE id=$1", [meeting.id])
   try {
-    const result = await transcribe(meeting.audio_path)
+    const result = await transcribe(meeting.audio_path, meeting.title)
     await pool.query("UPDATE meetings SET transcript=$1,status='transcribed',updated_at=now() WHERE id=$2", [result.text, meeting.id])
     res.json(result)
   } catch (error) {
@@ -198,7 +341,7 @@ app.post('/api/meetings/:id/analyze', requireAuth, asyncRoute(async (req, res) =
   const result = await analyze(meeting.transcript)
   const summary = { agenda: result.agenda || [], decisions: result.decisions || [], discussion: result.discussion || [], actions: result.actions || [] }
   await pool.query("UPDATE meetings SET summary=$1,analysis=$2,status='ready',updated_at=now() WHERE id=$3", [summary, result.sentiment || {}, meeting.id])
-  res.json({ summary, analysis: result.sentiment || {} })
+  res.json({ summary, analysis: result.sentiment || {}, mode: result.mode || 'openai' })
 }))
 
 app.put('/api/meetings/:id/summary', requireAuth, asyncRoute(async (req, res) => {
@@ -251,11 +394,19 @@ app.get('/api/meetings/:id/export.pdf', requireAuth, asyncRoute(async (req, res)
 
 app.use((err, req, res, _next) => {
   console.error(err)
-  res.status(err.code === 'LIMIT_FILE_SIZE' ? 413 : 500).json({ error: err.message || 'Unexpected server error.' })
+  if (err.code === 'LIMIT_FILE_SIZE') return res.status(413).json({ error: 'Audio files must be below 200 MB.' })
+  if (err.code === '23505') return res.status(409).json({ error: 'A record with the same unique value already exists.' })
+  if (err.message?.includes('AI processing is not configured')) return res.status(503).json({ error: 'AI processing is not configured. Add OPENAI_API_KEY on the server, then try again.' })
+  res.status(500).json({ error: err.message || 'Unexpected server error. Please try again.' })
 })
 
 migrate()
-  .then(() => app.listen(process.env.PORT || 3001, () => console.log(`API listening with ${databaseMode}`)))
+  .then(seedDemoData)
+  .then(() => app.listen(process.env.PORT || 3001, () => {
+    console.log(`API listening with ${databaseMode}`)
+    console.log(`Demo organizer: ${demoOrganizer.email} / ${demoOrganizer.password}`)
+    console.log(`Demo participant: ${demoParticipant.email} / ${demoParticipant.password}`)
+  }))
   .catch((error) => {
     console.error('Database migration failed', error)
     process.exit(1)
