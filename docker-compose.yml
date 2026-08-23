@@ -1,0 +1,38 @@
+services:
+  database:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-smartmom}
+      POSTGRES_USER: ${POSTGRES_USER:-smartmom}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-smartmom_local_password}
+    volumes: [postgres_data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  api:
+    build: { context: ., dockerfile: Dockerfile.api }
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DATABASE_URL: postgresql://${POSTGRES_USER:-smartmom}:${POSTGRES_PASSWORD:-smartmom_local_password}@database:5432/${POSTGRES_DB:-smartmom}
+      JWT_SECRET: ${JWT_SECRET:-change-this-before-production}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_TRANSCRIPTION_MODEL: ${OPENAI_TRANSCRIPTION_MODEL:-gpt-4o-transcribe-diarize}
+      OPENAI_SUMMARY_MODEL: ${OPENAI_SUMMARY_MODEL:-gpt-5-mini}
+      UPLOAD_DIR: /app/uploads
+      CLIENT_ORIGIN: ${CLIENT_ORIGIN:-http://localhost:8080}
+    volumes: [uploads_data:/app/uploads]
+    depends_on:
+      database: { condition: service_healthy }
+  web:
+    build: { context: ., dockerfile: Dockerfile.web }
+    restart: unless-stopped
+    depends_on: [api]
+    ports: ["8080:80"]
+volumes:
+  postgres_data:
+  uploads_data:
