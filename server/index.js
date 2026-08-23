@@ -88,6 +88,14 @@ app.get('/api/auth/me', requireAuth, asyncRoute(async (req, res) => {
   res.json(publicUser(result.rows[0]))
 }))
 
+app.put('/api/auth/me/role', requireAuth, asyncRoute(async (req, res) => {
+  const role = req.body.role
+  if (!validRole(role)) return res.status(400).json({ error: 'Choose either Organizer or Participant.' })
+  const result = await pool.query('UPDATE users SET role=$1 WHERE id=$2 RETURNING id,name,email,role', [role, req.user.sub])
+  if (!result.rows[0]) return res.sendStatus(404)
+  res.json(publicUser(result.rows[0]))
+}))
+
 app.get('/api/meetings', requireAuth, asyncRoute(async (req, res) => {
   const result = await pool.query(
     `SELECT DISTINCT m.id, m.title, m.status, m.transcript, m.summary, m.analysis,

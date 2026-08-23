@@ -138,11 +138,22 @@ export default function App() {
 
   function startNewMeeting() {
     if (user.role !== 'organizer') {
-      setNotice('Only Organizer accounts can create a new meeting. Sign in as an Organizer to upload or record audio.')
+      setNotice('Your current account role is Participant. Use “Switch to Organizer” in the profile area, then try again.')
       return
     }
     setNavView('workspace')
     fileInput.current?.click()
+  }
+
+  async function switchToOrganizer() {
+    try {
+      const updatedUser = await api('/auth/me/role', { method: 'PUT', body: JSON.stringify({ role: 'organizer' }) })
+      localStorage.setItem('smartmom_user', JSON.stringify(updatedUser))
+      setUser(updatedUser)
+      setNotice('You are now an Organizer. You can create a new meeting.')
+    } catch (error) {
+      setNotice(error.message)
+    }
   }
 
   async function recordAudio() {
@@ -313,6 +324,7 @@ export default function App() {
             <strong>{user.name}</strong>
             <small>{user.role} / {user.email}</small>
           </div>
+          {user.role !== 'organizer' && <button className="role-upgrade" title="Switch to Organizer" onClick={switchToOrganizer}><ShieldCheck size={15} /> Organizer</button>}
           <button title="Sign out" onClick={() => { localStorage.clear(); setUser(null) }}><LogOut size={17} /></button>
         </div>
       </aside>
