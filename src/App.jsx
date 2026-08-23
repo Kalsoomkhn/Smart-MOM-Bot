@@ -53,6 +53,7 @@ export default function App() {
   const [meetings, setMeetings] = useState([])
   const [selected, setSelected] = useState()
   const [activeTab, setActiveTab] = useState('Minutes')
+  const [navView, setNavView] = useState('workspace')
   const [notice, setNotice] = useState('')
   const [busy, setBusy] = useState(false)
   const [query, setQuery] = useState('')
@@ -276,14 +277,14 @@ export default function App() {
             <small>AI Meeting Minutes</small>
           </div>
         </div>
-        <button className="primary-action" onClick={() => fileInput.current?.click()} disabled={user.role !== 'organizer'}>
+        <button className="primary-action" onClick={() => { setNavView('workspace'); fileInput.current?.click() }} disabled={user.role !== 'organizer'}>
           <Plus size={18} /> New meeting
         </button>
         <input ref={fileInput} hidden type="file" accept="audio/mpeg,audio/wav,audio/mp4,audio/ogg,audio/webm" onChange={(event) => uploadAudio(event.target.files[0])} />
         <nav className="main-nav">
-          <button className="active"><LayoutDashboard size={17} /> Workspace</button>
-          <button><FileText size={17} /> Minutes archive</button>
-          <button><ShieldCheck size={17} /> Review queue</button>
+          <button className={navView === 'workspace' ? 'active' : ''} onClick={() => setNavView('workspace')}><LayoutDashboard size={17} /> Workspace</button>
+          <button className={navView === 'archive' ? 'active' : ''} onClick={() => setNavView('archive')}><FileText size={17} /> Minutes archive</button>
+          <button className={navView === 'review' ? 'active' : ''} onClick={() => setNavView('review')}><ShieldCheck size={17} /> Review queue</button>
         </nav>
         <div className="meeting-list-head">
           <span>Meetings</span>
@@ -291,7 +292,7 @@ export default function App() {
         </div>
         <div className="meeting-list">
           {meetings.map((meeting) => (
-            <button className={`meeting-row ${meeting.id === selected ? 'selected' : ''}`} onClick={() => setSelected(meeting.id)} key={meeting.id}>
+            <button className={`meeting-row ${meeting.id === selected ? 'selected' : ''}`} onClick={() => { setSelected(meeting.id); setNavView('workspace') }} key={meeting.id}>
               <span>{meeting.title}</span>
               <small>{meeting.access_role} / {meeting.status}</small>
             </button>
@@ -309,7 +310,11 @@ export default function App() {
 
       <main className="workspace">
         {notice && <div className="notice"><span>{notice}</span><button onClick={() => setNotice('')}>Dismiss</button></div>}
-        {!current ? (
+        {navView === 'archive' ? (
+          <MeetingDirectory title="Minutes archive" subtitle="Browse every meeting record you can access." meetings={meetings} onOpen={(meeting) => { setSelected(meeting.id); setNavView('workspace') }} />
+        ) : navView === 'review' ? (
+          <MeetingDirectory title="Review queue" subtitle="Meetings that still need transcript, AI review, or final approval." meetings={meetings.filter((meeting) => meeting.status !== 'saved')} onOpen={(meeting) => { setSelected(meeting.id); setNavView('workspace') }} emptyMessage="Everything is reviewed. Your queue is clear." />
+        ) : !current ? (
           <EmptyState user={user} upload={() => fileInput.current?.click()} />
         ) : (
           <>
@@ -400,6 +405,23 @@ function EmptyState({ user, upload }) {
       <h1>{user.role === 'organizer' ? 'Upload the first meeting audio' : 'No shared meetings yet'}</h1>
       <p>{user.role === 'organizer' ? 'Create a real meeting workspace from an audio file or live recording.' : 'Ask an Organizer to invite this registered email to a meeting.'}</p>
       {user.role === 'organizer' && <button onClick={upload}><Upload size={17} /> Upload audio</button>}
+    </section>
+  )
+}
+
+function MeetingDirectory({ title, subtitle, meetings, onOpen, emptyMessage = 'No meeting records are available yet.' }) {
+  return (
+    <section className="meeting-directory">
+      <span className="eyebrow">SmartMOM workspace</span>
+      <h1>{title}</h1>
+      <p>{subtitle}</p>
+      {meetings.length ? <div className="directory-list">{meetings.map((meeting) => (
+        <button key={meeting.id} onClick={() => onOpen(meeting)}>
+          <span className="directory-icon"><FileText size={19} /></span>
+          <span><strong>{meeting.title}</strong><small>{new Date(meeting.created_at).toLocaleString()}</small></span>
+          <em>{meeting.status}</em><ChevronRight size={18} />
+        </button>
+      ))}</div> : <div className="directory-empty"><FileText size={30} /><strong>{emptyMessage}</strong></div>}
     </section>
   )
 }
