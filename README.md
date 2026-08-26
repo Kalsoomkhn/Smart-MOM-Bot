@@ -6,7 +6,8 @@ SmartMOM Bot is a professional meeting-intelligence workspace that turns consent
 
 - Secure Organizer and Participant roles with JWT authentication
 - Upload or record meeting audio directly in the workspace
-- AI transcription and structured minutes generation with OpenAI
+- Free local Whisper transcription with speaker-turn segmentation
+- Structured minutes generation with OpenAI when configured, with deterministic demo analysis otherwise
 - Editable agenda, decisions, discussion notes, and action items
 - Meeting participant access control and feedback capture
 - PDF export for finalized meeting minutes
@@ -25,8 +26,8 @@ SmartMOM Bot is a professional meeting-intelligence workspace that turns consent
 
 1. Copy `.env.example` to `.env`.
 2. Set strong values for `POSTGRES_PASSWORD` and `JWT_SECRET`.
-3. Add `OPENAI_API_KEY` to enable real OpenAI transcription and AI analysis.
-4. Start the application:
+3. `OPENAI_API_KEY` is optional and is used only for real AI analysis/minutes generation.
+4. Start the application (the first API build downloads and packages the local Whisper model):
 
 ```bash
 docker compose up --build -d
@@ -63,9 +64,17 @@ Manual workflow:
 4. Click **Analyze**.
 5. Review the generated minutes, insights, participant access, feedback, and PDF export.
 
-If `OPENAI_API_KEY` is not configured, SmartMOM uses a deterministic demo mode so the FYP workflow can still be tested end to end. Add a real API key in `.env` when you want real audio transcription and AI-generated summaries.
+Audio transcription runs locally and does not need an API key. If `OPENAI_API_KEY` is not configured, only the analysis/minutes stage uses deterministic demo output.
 
 ## Local development
+
+On 64-bit Windows, install the local Whisper executable and free model once:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\setup-local-whisper.ps1
+```
+
+The model is about 465 MB. It is stored under `models/`, while the executable is stored under `tools/`; both are intentionally ignored by Git. Then start the app:
 
 ```bash
 npm install
@@ -82,8 +91,12 @@ The frontend runs on Vite's displayed local URL and proxies API requests to port
 | `POSTGRES_USER` | PostgreSQL user for Docker |
 | `POSTGRES_PASSWORD` | PostgreSQL password for Docker |
 | `JWT_SECRET` | Long random value used to sign sessions |
-| `OPENAI_API_KEY` | Enables audio transcription and AI minutes generation |
-| `OPENAI_TRANSCRIPTION_MODEL` | Defaults to `gpt-4o-transcribe-diarize` |
+| `OPENAI_API_KEY` | Optional; enables real OpenAI analysis/minutes generation |
+| `TRANSCRIPTION_PROVIDER` | Defaults to `local`; set to `openai` only to use OpenAI transcription |
+| `WHISPER_CPP_PATH` | Path to the local `whisper-cli` executable |
+| `WHISPER_MODEL_PATH` | Path to the free `ggml-small.en-tdrz.bin` model |
+| `WHISPER_LANGUAGE` | Local transcription language; the included tinydiarize model supports English |
+| `OPENAI_TRANSCRIPTION_MODEL` | Used only when `TRANSCRIPTION_PROVIDER=openai` |
 | `OPENAI_SUMMARY_MODEL` | Defaults to `gpt-5-mini` |
 | `DATABASE_URL` | PostgreSQL connection string for non-Docker deployments |
 | `CLIENT_ORIGIN` | Browser origin allowed by the API |
@@ -95,6 +108,7 @@ The frontend runs on Vite's displayed local URL and proxies API requests to port
 - Use encrypted object storage instead of local volumes when scaling across instances.
 - Obtain participant consent before recording and define retention and deletion policies.
 - AI-generated minutes are review drafts: users should verify decisions, owners, and due dates before export.
+- Whisper tinydiarize speaker segmentation is experimental. It detects speaker turns and the app labels alternating turns as Speaker 1 and Speaker 2; users should verify speaker labels, especially for meetings with more than two participants.
 
 ## Scripts
 

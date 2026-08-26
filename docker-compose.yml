@@ -23,6 +23,10 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_TRANSCRIPTION_MODEL: ${OPENAI_TRANSCRIPTION_MODEL:-gpt-4o-transcribe-diarize}
       OPENAI_SUMMARY_MODEL: ${OPENAI_SUMMARY_MODEL:-gpt-5-mini}
+      TRANSCRIPTION_PROVIDER: local
+      WHISPER_CPP_PATH: /app/tools/whisper/whisper-cli
+      WHISPER_MODEL_PATH: /app/models/ggml-small.en-tdrz.bin
+      WHISPER_LANGUAGE: ${WHISPER_LANGUAGE:-en}
       UPLOAD_DIR: /app/uploads
       CLIENT_ORIGIN: ${CLIENT_ORIGIN:-http://localhost:8080}
     volumes: [uploads_data:/app/uploads]

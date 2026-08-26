@@ -394,6 +394,7 @@ app.get('/api/meetings/:id/export.pdf', requireAuth, asyncRoute(async (req, res)
 
 app.use((err, req, res, _next) => {
   console.error(err)
+  if (err.code === 'LOCAL_TRANSCRIPTION_NOT_CONFIGURED') return res.status(503).json({ error: err.message })
   if (err.code === 'LIMIT_FILE_SIZE') return res.status(413).json({ error: 'Audio files must be below 200 MB.' })
   if (err.code === '23505') return res.status(409).json({ error: 'A record with the same unique value already exists.' })
   if (err.message?.includes('AI processing is not configured')) return res.status(503).json({ error: 'AI processing is not configured. Add OPENAI_API_KEY on the server, then try again.' })

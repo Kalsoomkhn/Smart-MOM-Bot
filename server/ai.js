@@ -1,5 +1,6 @@
 import fs from 'node:fs'
 import OpenAI from 'openai'
+import { transcribeLocally } from './local-transcription.js'
 
 const hasOpenAI = () => Boolean(process.env.OPENAI_API_KEY)
 const client = () => new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
@@ -86,9 +87,8 @@ function demoAnalysis(transcript) {
 }
 
 export async function transcribe(filePath, title) {
-  if (!hasOpenAI()) {
-    return { text: demoTranscript(title), segments: [], mode: 'demo' }
-  }
+  if ((process.env.TRANSCRIPTION_PROVIDER || 'local') === 'local') return transcribeLocally(filePath)
+  if (!hasOpenAI()) return { text: demoTranscript(title), segments: [], mode: 'demo' }
   const result = await client().audio.transcriptions.create({
     file: fs.createReadStream(filePath),
     model: process.env.OPENAI_TRANSCRIPTION_MODEL || 'gpt-4o-transcribe-diarize',
