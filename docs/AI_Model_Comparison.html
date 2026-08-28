@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SmartMOM Bot — AI Model Comparison</title>
+<style>
+  @page { size: A4; margin: 2cm; }
+  body { font-family: Calibri, Arial, sans-serif; color: #172033; font-size: 10.5pt; line-height: 1.35; }
+  h1 { color: #17365d; font-size: 24pt; border-bottom: 2px solid #4f81bd; padding-bottom: 8px; }
+  h2 { color: #1f4e79; font-size: 16pt; margin-top: 22px; }
+  h3 { color: #2f5597; font-size: 13pt; margin-top: 16px; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0 16px; font-size: 8.5pt; }
+  th { background: #1f4e79; color: white; font-weight: bold; }
+  th, td { border: 1px solid #9eacc0; padding: 6px; vertical-align: top; }
+  tr:nth-child(even) td { background: #eef3f8; }
+  code { font-family: Consolas, monospace; background: #eef1f5; padding: 1px 3px; }
+  a { color: #0563c1; }
+  blockquote { border-left: 4px solid #4f81bd; padding-left: 10px; color: #44546a; }
+</style>
+</head>
+<body><h1>SmartMOM Bot — AI Model Comparison</h1>
+<p><strong>Project:</strong> SmartMOM Bot<br><strong>Document purpose:</strong> Compare the models used or considered at each AI-processing stage and justify the current selections.<br><strong>Last updated:</strong> 26 August 2026</p>
+<h2>1. Executive summary</h2>
+<p>SmartMOM uses two main AI-processing stages. Audio transcription and speaker-turn segmentation run locally with the free <code>ggml-small.en-tdrz</code> Whisper model through <code>whisper.cpp</code>. Meeting analysis uses <code>gpt-5-mini</code> when an OpenAI API key is configured. Without an OpenAI key, the analysis stage returns deterministic demonstration data; this fallback is application logic and not a machine-learning model.</p>
+<table>
+<thead>
+<tr>
+<th>Stage</th>
+<th>Current selection</th>
+<th>Runs where</th>
+<th>API key</th>
+<th>Direct usage cost</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Audio preparation</td>
+<td>FFmpeg conversion</td>
+<td>Local machine/server</td>
+<td>No</td>
+<td>Free</td>
+</tr>
+<tr>
+<td>Speech transcription</td>
+<td>Whisper <code>small.en-tdrz</code> in GGML format</td>
+<td>Local machine/server</td>
+<td>No</td>
+<td>Free</td>
+</tr>
+<tr>
+<td>Speaker processing</td>
+<td>Tinydiarize speaker-turn detection from the same model</td>
+<td>Local machine/server</td>
+<td>No</td>
+<td>Free</td>
+</tr>
+<tr>
+<td>Agenda and discussion extraction</td>
+<td><code>gpt-5-mini</code></td>
+<td>OpenAI API</td>
+<td>Yes</td>
+<td>Usage-based</td>
+</tr>
+<tr>
+<td>Decision and action-item extraction</td>
+<td><code>gpt-5-mini</code></td>
+<td>OpenAI API</td>
+<td>Yes</td>
+<td>Usage-based</td>
+</tr>
+<tr>
+<td>Sentiment and engagement analysis</td>
+<td><code>gpt-5-mini</code></td>
+<td>OpenAI API</td>
+<td>Yes</td>
+<td>Usage-based</td>
+</tr>
+<tr>
+<td>Analysis fallback</td>
+<td>Deterministic JavaScript demo rules</td>
+<td>Local server</td>
+<td>No</td>
+<td>Free</td>
+</tr>
+</tbody></table>
+<h2>2. Stage 1 — Audio preparation</h2>
+<p>The uploaded MP3, WAV, M4A, MP4, OGG, or WebM file is converted by FFmpeg into 16 kHz, mono, 16-bit PCM WAV. This is signal preprocessing rather than an AI model. It ensures that the local Whisper executable receives a consistent input format.</p>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Advantages</th>
+<th>Limitations</th>
+<th>Decision</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>FFmpeg</td>
+<td>Free, mature, supports many audio formats, reliable conversion</td>
+<td>Adds a binary dependency</td>
+<td><strong>Selected</strong></td>
+</tr>
+<tr>
+<td>Browser-only conversion</td>
+<td>Processing stays in the browser</td>
+<td>Inconsistent codec support and greater frontend complexity</td>
+<td>Not selected</td>
+</tr>
+<tr>
+<td>Cloud media-conversion service</td>
+<td>Scalable and managed</td>
+<td>Network, privacy, account, and cost requirements</td>
+<td>Not selected</td>
+</tr>
+</tbody></table>
+<h2>3. Stage 2 — Speech transcription</h2>
+<h3>Current model: Whisper <code>small.en-tdrz</code></h3>
+<p>The project uses <code>ggml-small.en-tdrz.bin</code> with <code>whisper.cpp</code>. The model runs on the project machine, so meeting audio is not sent to an external transcription API. The model is English-specific and includes support for experimental speaker-turn detection.</p>
+<table>
+<thead>
+<tr>
+<th>Candidate</th>
+<th>Deployment</th>
+<th>Relative resource requirement</th>
+<th>Accuracy expectation</th>
+<th>Main advantage</th>
+<th>Main limitation</th>
+<th>Suitability for SmartMOM</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Whisper <code>tiny.en</code></td>
+<td>Local</td>
+<td>Very low</td>
+<td>Lowest among listed Whisper sizes</td>
+<td>Fast on weak CPUs</td>
+<td>More transcription errors</td>
+<td>Useful only for very weak hardware</td>
+</tr>
+<tr>
+<td>Whisper <code>base.en</code></td>
+<td>Local</td>
+<td>Low</td>
+<td>Better than tiny</td>
+<td>Good speed/size balance</td>
+<td>No integrated tinydiarize model in this implementation</td>
+<td>Possible transcription-only alternative</td>
+</tr>
+<tr>
+<td><strong>Whisper <code>small.en-tdrz</code></strong></td>
+<td><strong>Local</strong></td>
+<td><strong>Moderate</strong></td>
+<td><strong>Good for clear English meetings</strong></td>
+<td><strong>Free transcription and turn detection in one model</strong></td>
+<td>English-only; turn detection is experimental</td>
+<td><strong>Selected for the FYP</strong></td>
+</tr>
+<tr>
+<td>Whisper <code>medium.en</code></td>
+<td>Local</td>
+<td>High</td>
+<td>Usually stronger than small on difficult audio</td>
+<td>Better recognition potential</td>
+<td>Slower and requires much more memory/disk</td>
+<td>Better for powerful machines, but lacks the selected integrated workflow</td>
+</tr>
+<tr>
+<td>Whisper <code>large-v3</code>/Turbo</td>
+<td>Local</td>
+<td>Very high</td>
+<td>Strong multilingual recognition</td>
+<td>Better language coverage and robustness</td>
+<td>Heavy CPU/GPU and storage requirements</td>
+<td>Not ideal for an ordinary FYP laptop</td>
+</tr>
+<tr>
+<td><code>faster-whisper</code></td>
+<td>Local Python service</td>
+<td>Depends on model</td>
+<td>Same Whisper family with optimized inference</td>
+<td>Fast batched/GPU inference</td>
+<td>Requires Python and a more complex service</td>
+<td>Strong future upgrade</td>
+</tr>
+<tr>
+<td>OpenAI <code>gpt-4o-transcribe-diarize</code></td>
+<td>Cloud API</td>
+<td>Minimal local hardware</td>
+<td>Managed transcription and diarization</td>
+<td>Simple API and stronger managed workflow</td>
+<td>Paid API key, network, and external audio processing</td>
+<td>Original implementation; removed as the default</td>
+</tr>
+</tbody></table>
+<h3>Selection rationale</h3>
+<p><code>small.en-tdrz</code> was selected because it provides the best practical compromise for the current project: no paid API, manageable model size, CPU operation, adequate English transcription, and speaker-turn detection through one local executable. The application source also includes a repeatable Windows setup script and a Docker build configuration.</p>
+<h2>4. Stage 3 — Speaker diarization</h2>
+<p>Speaker diarization answers “who spoke when.” The current implementation more precisely performs <strong>speaker-turn segmentation</strong>: tinydiarize marks places where the speaker appears to change, and SmartMOM assigns alternating labels (<code>Speaker 1</code>, <code>Speaker 2</code>). It does not compute persistent voice identities and should not be treated as robust multi-speaker identity clustering.</p>
+<table>
+<thead>
+<tr>
+<th>Candidate</th>
+<th>What it provides</th>
+<th>Cost/access</th>
+<th>Strengths</th>
+<th>Limitations</th>
+<th>Decision</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Whisper tinydiarize</strong></td>
+<td>Speaker-change markers integrated with transcription</td>
+<td>Free, local, no account</td>
+<td>Lightweight and easy to deploy with <code>whisper.cpp</code></td>
+<td>Experimental; best suited to two-person alternating speech; weak for overlap and three or more speakers</td>
+<td><strong>Selected for the current FYP</strong></td>
+</tr>
+<tr>
+<td><code>pyannote.audio community-1</code></td>
+<td>Speaker segmentation, clustering, speaker embeddings, and optional speaker-count constraints</td>
+<td>Open-source/local after model access and download</td>
+<td>Proper multi-speaker diarization and overlap-aware output</td>
+<td>Python/PyTorch stack, heavier setup, typically requires accepting model terms and a Hugging Face token for download</td>
+<td>Recommended future accuracy upgrade</td>
+</tr>
+<tr>
+<td>WhisperX + pyannote</td>
+<td>Whisper transcription, word alignment, and pyannote speaker assignment</td>
+<td>Open-source/local after dependencies/model access</td>
+<td>Word-level timing and stronger multi-speaker pipeline</td>
+<td>More RAM/VRAM, Python, FFmpeg, alignment models, and configuration</td>
+<td>Best future option for GPU-capable deployment</td>
+</tr>
+<tr>
+<td>OpenAI diarized transcription</td>
+<td>Managed transcript with speaker labels</td>
+<td>Paid API</td>
+<td>Minimal local setup</td>
+<td>API key, usage cost, internet dependency, and external processing</td>
+<td>Not selected because the project requires a free local path</td>
+</tr>
+</tbody></table>
+<h3>Selection rationale</h3>
+<p>Tinydiarize satisfies the project’s immediate constraint—free local processing on the current Windows machine—without adding Python, PyTorch, GPU drivers, or a second large model. For a production system or meetings with more than two speakers, <code>pyannote.audio community-1</code> or WhisperX would be the more technically appropriate choice.</p>
+<h2>5. Stage 4 — Meeting-minutes generation</h2>
+<p>After transcription, SmartMOM sends the reviewed transcript to one structured analysis request. The model returns JSON containing the agenda, decisions, discussion points, action items, owners, due dates, overall sentiment, and participant engagement.</p>
+<h3>Current model: <code>gpt-5-mini</code></h3>
+<table>
+<thead>
+<tr>
+<th>Candidate</th>
+<th>Deployment</th>
+<th>Structured extraction</th>
+<th>Cost</th>
+<th>Strengths</th>
+<th>Limitations</th>
+<th>Suitability</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong><code>gpt-5-mini</code></strong></td>
+<td>OpenAI API</td>
+<td>Strong when prompted for JSON</td>
+<td>Usage-based</td>
+<td>Good instruction following and combines several analysis tasks in one call</td>
+<td>Requires API key and internet; output still needs human review</td>
+<td><strong>Selected when an API key is available</strong></td>
+</tr>
+<tr>
+<td>Larger frontier API model</td>
+<td>Cloud API</td>
+<td>Potentially stronger</td>
+<td>Higher</td>
+<td>Better reasoning on ambiguous meetings</td>
+<td>Greater cost and latency than needed for routine extraction</td>
+<td>Unnecessary for the current FYP</td>
+</tr>
+<tr>
+<td>Smaller cloud model</td>
+<td>Cloud API</td>
+<td>Moderate</td>
+<td>Lower</td>
+<td>Fast and inexpensive</td>
+<td>Higher risk of omissions or malformed extraction</td>
+<td>Possible cost-focused alternative</td>
+</tr>
+<tr>
+<td>Local Qwen/Llama-class instruct model through Ollama</td>
+<td>Local</td>
+<td>Depends on model and prompt</td>
+<td>No per-request fee</td>
+<td>Private and API-key-free after download</td>
+<td>Requires several GB of storage/RAM; weaker hardware may be slow; JSON reliability varies</td>
+<td>Recommended future fully offline option</td>
+</tr>
+<tr>
+<td>Rule-based extraction</td>
+<td>Local</td>
+<td>Low</td>
+<td>Free</td>
+<td>Predictable and fast</td>
+<td>Cannot reliably understand varied natural-language meetings</td>
+<td>Suitable only as a demo fallback</td>
+</tr>
+</tbody></table>
+<h3>Selection rationale</h3>
+<p><code>gpt-5-mini</code> is retained because the user requested that the already-working analysis functionality remain unchanged. It performs agenda extraction, summarization, decisions, action items, sentiment, and engagement in one call, reducing backend complexity. A local Ollama model would be required if the whole analysis pipeline must later become independent of paid APIs.</p>
+<h2>6. Stage 5 — Sentiment and participant engagement</h2>
+<p>SmartMOM does not currently use a separate sentiment-classification model. <code>gpt-5-mini</code> produces the sentiment and engagement fields in the same structured response used for meeting minutes.</p>
+<table>
+<thead>
+<tr>
+<th>Approach</th>
+<th>Advantages</th>
+<th>Limitations</th>
+<th>Decision</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Use <code>gpt-5-mini</code> with transcript context</strong></td>
+<td>One request; considers surrounding discussion; simple architecture</td>
+<td>Scores are model estimates, not scientifically calibrated measurements</td>
+<td><strong>Current implementation</strong></td>
+</tr>
+<tr>
+<td>Dedicated transformer sentiment classifier</td>
+<td>Repeatable labels and local inference</td>
+<td>Many classifiers are trained on reviews/social media rather than meeting dialogue; speaker attribution must already be accurate</td>
+<td>Possible research extension</td>
+</tr>
+<tr>
+<td>Lexicon/rule-based sentiment</td>
+<td>Free, transparent, and fast</td>
+<td>Poor handling of context, negation, technical language, and neutral business discussion</td>
+<td>Not selected</td>
+</tr>
+</tbody></table>
+<p>Engagement percentages must be presented as qualitative AI-generated indicators, not objective measurements. They should not be used for employee evaluation or other high-impact decisions.</p>
+<h2>7. Final comparison and recommendation</h2>
+<table>
+<thead>
+<tr>
+<th>Requirement</th>
+<th>Local Whisper + tinydiarize</th>
+<th>WhisperX + pyannote</th>
+<th>OpenAI-only pipeline</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>No paid transcription key</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>No</td>
+</tr>
+<tr>
+<td>Works without sending audio to a cloud API</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>No</td>
+</tr>
+<tr>
+<td>Simple Windows deployment</td>
+<td>Best of the three</td>
+<td>More difficult</td>
+<td>Simple only after API setup</td>
+</tr>
+<tr>
+<td>Ordinary CPU suitability</td>
+<td>Good with the small model</td>
+<td>Slower/heavier</td>
+<td>Excellent because work is remote</td>
+</tr>
+<tr>
+<td>Two-speaker turn separation</td>
+<td>Basic/experimental</td>
+<td>Stronger</td>
+<td>Managed</td>
+</tr>
+<tr>
+<td>Multi-speaker identity consistency</td>
+<td>Weak</td>
+<td>Stronger</td>
+<td>Managed</td>
+</tr>
+<tr>
+<td>Word-level alignment</td>
+<td>No</td>
+<td>Yes</td>
+<td>Provider-dependent</td>
+</tr>
+<tr>
+<td>Current project fit</td>
+<td><strong>Best practical FYP choice</strong></td>
+<td>Best future technical upgrade</td>
+<td>Conflicts with the no-paid-key requirement</td>
+</tr>
+</tbody></table>
+<h3>Current recommendation</h3>
+<p>Keep <code>small.en-tdrz</code> with <code>whisper.cpp</code> for the submitted FYP because it creates a real, free, locally executable transcription workflow on the available machine. Require organizer review of transcript text and speaker labels before analysis and export. If evaluation later requires accurate three-or-more-speaker diarization, upgrade only the diarization/transcription service to WhisperX plus <code>pyannote.audio community-1</code>; the React interface, Express routes, database schema, minutes analysis, feedback, and PDF export can remain unchanged.</p>
+<h2>8. Model locations in the codebase</h2>
+<table>
+<thead>
+<tr>
+<th>Configuration or implementation</th>
+<th>Location</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Transcription-provider selection</td>
+<td><code>server/ai.js</code></td>
+</tr>
+<tr>
+<td>Local Whisper execution and speaker-label parsing</td>
+<td><code>server/local-transcription.js</code></td>
+</tr>
+<tr>
+<td>Local-model Windows installer</td>
+<td><code>scripts/setup-local-whisper.ps1</code></td>
+</tr>
+<tr>
+<td>Docker model build and checksum validation</td>
+<td><code>Dockerfile.api</code></td>
+</tr>
+<tr>
+<td>Model paths and language settings</td>
+<td><code>.env.example</code> and <code>docker-compose.yml</code></td>
+</tr>
+<tr>
+<td>Analysis model selection</td>
+<td><code>OPENAI_SUMMARY_MODEL</code> in <code>.env</code>; consumed by <code>server/ai.js</code></td>
+</tr>
+</tbody></table>
+<h2>9. References</h2>
+<ol>
+<li>ggml-org, <strong>whisper.cpp</strong>, including the documented experimental tinydiarize workflow: <a href="https://github.com/ggml-org/whisper.cpp/blob/master/README.md">https://github.com/ggml-org/whisper.cpp/blob/master/README.md</a></li>
+<li>OpenAI, <strong>API model documentation</strong>: <a href="https://platform.openai.com/docs/models">https://platform.openai.com/docs/models</a></li>
+<li>Bain et al., <strong>WhisperX: Time-Accurate Speech Transcription of Long-Form Audio</strong> and implementation: <a href="https://github.com/m-bain/whisperX">https://github.com/m-bain/whisperX</a></li>
+<li>pyannote, <strong>pyannote.audio speaker-diarization toolkit</strong>: <a href="https://github.com/pyannote/pyannote-audio">https://github.com/pyannote/pyannote-audio</a></li>
+</ol>
+</body>
+</html>

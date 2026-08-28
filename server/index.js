@@ -7,15 +7,13 @@ import bcrypt from 'bcryptjs'
 import fs from 'node:fs'
 import path from 'node:path'
 import { randomUUID } from 'node:crypto'
-import PDFDocument, { registerStdFonts } from 'pdfkit'
-import Helvetica from 'pdfkit/standard-fonts/Helvetica'
+import PDFDocument from 'pdfkit'
 import 'dotenv/config'
 import { pool, migrate, databaseMode } from './db.js'
 import { id, sign, requireAuth } from './auth.js'
 import { transcribe, analyze } from './ai.js'
 
 const app = express()
-registerStdFonts(Helvetica)
 const uploadDir = path.resolve(process.env.UPLOAD_DIR || './uploads')
 fs.mkdirSync(uploadDir, { recursive: true })
 
