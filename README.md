@@ -7,7 +7,8 @@ SmartMOM Bot is a professional meeting-intelligence workspace that turns consent
 - Secure Organizer and Participant roles with JWT authentication
 - Upload or record meeting audio directly in the workspace
 - Free local Whisper transcription with speaker-turn segmentation
-- Structured minutes generation with OpenAI when configured, with deterministic demo analysis otherwise
+- Free local structured minutes generation with quantized Qwen2.5
+- Dedicated local DistilBERT sentiment analysis and transparent speaking-share engagement
 - Editable agenda, decisions, discussion notes, and action items
 - Meeting participant access control and feedback capture
 - PDF export for finalized meeting minutes
@@ -26,8 +27,8 @@ SmartMOM Bot is a professional meeting-intelligence workspace that turns consent
 
 1. Copy `.env.example` to `.env`.
 2. Set strong values for `POSTGRES_PASSWORD` and `JWT_SECRET`.
-3. `OPENAI_API_KEY` is optional and is used only for real AI analysis/minutes generation.
-4. Start the application (the first API build downloads and packages the local Whisper model):
+3. `OPENAI_API_KEY` is optional; the default AI workflow does not need it.
+4. Start the application (the API image packages Whisper; Qwen and DistilBERT download into a persistent model volume on first analysis):
 
 ```bash
 docker compose up --build -d
@@ -64,7 +65,7 @@ Manual workflow:
 4. Click **Analyze**.
 5. Review the generated minutes, insights, participant access, feedback, and PDF export.
 
-Audio transcription runs locally and does not need an API key. If `OPENAI_API_KEY` is not configured, only the analysis/minutes stage uses deterministic demo output.
+Audio transcription, minutes extraction, and sentiment analysis run locally and do not need an API key. The first analysis downloads the quantized Qwen and DistilBERT model files; later runs use the local cache.
 
 ## Local development
 
@@ -74,7 +75,7 @@ On 64-bit Windows, install the local Whisper executable and free model once:
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\setup-local-whisper.ps1
 ```
 
-The model is about 465 MB. It is stored under `models/`, while the executable is stored under `tools/`; both are intentionally ignored by Git. Then start the app:
+The Whisper model is about 465 MB. It is stored under `models/`, while the executable is stored under `tools/`; both are intentionally ignored by Git. Then start the app:
 
 ```bash
 npm install
@@ -91,11 +92,16 @@ The frontend runs on Vite's displayed local URL and proxies API requests to port
 | `POSTGRES_USER` | PostgreSQL user for Docker |
 | `POSTGRES_PASSWORD` | PostgreSQL password for Docker |
 | `JWT_SECRET` | Long random value used to sign sessions |
-| `OPENAI_API_KEY` | Optional; enables real OpenAI analysis/minutes generation |
+| `OPENAI_API_KEY` | Optional; only needed when an OpenAI provider is explicitly selected |
 | `TRANSCRIPTION_PROVIDER` | Defaults to `local`; set to `openai` only to use OpenAI transcription |
+| `MINUTES_PROVIDER` | Defaults to `local`; set to `openai` only to use OpenAI minutes generation |
 | `WHISPER_CPP_PATH` | Path to the local `whisper-cli` executable |
 | `WHISPER_MODEL_PATH` | Path to the free `ggml-small.en-tdrz.bin` model |
 | `WHISPER_LANGUAGE` | Local transcription language; the included tinydiarize model supports English |
+| `HF_MODEL_CACHE` | Persistent cache for local Hugging Face ONNX weights |
+| `LOCAL_MINUTES_MODEL` | Defaults to `onnx-community/Qwen2.5-1.5B-Instruct` |
+| `LOCAL_SENTIMENT_MODEL` | Defaults to the DistilBERT SST-2 Transformers.js model |
+| `LOCAL_MODEL_DTYPE` | Local model quantization type; defaults to `q4` |
 | `OPENAI_TRANSCRIPTION_MODEL` | Used only when `TRANSCRIPTION_PROVIDER=openai` |
 | `OPENAI_SUMMARY_MODEL` | Defaults to `gpt-5-mini` |
 | `DATABASE_URL` | PostgreSQL connection string for non-Docker deployments |

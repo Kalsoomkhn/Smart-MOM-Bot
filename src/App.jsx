@@ -224,7 +224,7 @@ export default function App() {
       setSummary(data.summary)
       await loadMeetings()
       setActiveTab('Minutes')
-      setNotice(data.mode === 'demo' ? 'Demo minutes generated without an OpenAI key. Add OPENAI_API_KEY for real audio transcription and analysis.' : 'AI minutes, decisions, action items, sentiment, and engagement are ready for review.')
+      setNotice(data.mode === 'local-qwen' ? 'Free local AI minutes and sentiment are ready for review.' : 'AI minutes, decisions, action items, sentiment, and engagement are ready for review.')
     } catch (error) {
       setNotice(error.message)
     } finally {
