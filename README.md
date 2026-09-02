@@ -19,7 +19,7 @@ SmartMOM Bot is a professional meeting-intelligence workspace that turns consent
 | Service | Responsibility |
 | --- | --- |
 | `web` | React production build served through Nginx |
-| `api` | Express API, authentication, file handling, AI processing, PDF generation |
+| `api` | Python/FastAPI API, authentication, file handling, AI processing, PDF generation |
 | `database` | PostgreSQL 16 persistent application database |
 | `nginx` | Included inside the `web` container; serves the SPA and proxies `/api` |
 
@@ -82,7 +82,14 @@ npm install
 npm run dev:full
 ```
 
-The frontend runs on Vite's displayed local URL and proxies API requests to port `3001`. When `DATABASE_URL` is not set, the API uses persistent embedded PGlite storage under `.data/` for local development.
+Install Python 3.12, then create a virtual environment and install the backend dependencies:
+
+```powershell
+py -3.12 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r backend\requirements.txt
+```
+
+The frontend runs on Vite's displayed local URL and proxies API requests to port `3001`. When `DATABASE_URL` is not set, the API uses persistent SQLite storage under `.data/` for local development. Docker uses PostgreSQL. The Python backend is organized under `backend/app` into API adapters, services, repositories, database models, schemas, and core configuration.
 
 ## Environment variables
 
@@ -98,10 +105,9 @@ The frontend runs on Vite's displayed local URL and proxies API requests to port
 | `WHISPER_CPP_PATH` | Path to the local `whisper-cli` executable |
 | `WHISPER_MODEL_PATH` | Path to the free `ggml-small.en-tdrz.bin` model |
 | `WHISPER_LANGUAGE` | Local transcription language; the included tinydiarize model supports English |
-| `HF_MODEL_CACHE` | Persistent cache for local Hugging Face ONNX weights |
+| `HF_HOME` | Persistent cache for local Hugging Face model weights |
 | `LOCAL_MINUTES_MODEL` | Defaults to `onnx-community/Qwen2.5-1.5B-Instruct` |
 | `LOCAL_SENTIMENT_MODEL` | Defaults to the DistilBERT SST-2 Transformers.js model |
-| `LOCAL_MODEL_DTYPE` | Local model quantization type; defaults to `q4` |
 | `OPENAI_TRANSCRIPTION_MODEL` | Used only when `TRANSCRIPTION_PROVIDER=openai` |
 | `OPENAI_SUMMARY_MODEL` | Defaults to `gpt-5-mini` |
 | `DATABASE_URL` | PostgreSQL connection string for non-Docker deployments |
@@ -121,8 +127,8 @@ The frontend runs on Vite's displayed local URL and proxies API requests to port
 | Command | Description |
 | --- | --- |
 | `npm run dev` | Start the Vite frontend |
-| `npm run server` | Start the Express API |
+| `npm run server` | Start the Python FastAPI server |
 | `npm run dev:full` | Start frontend and API together |
 | `npm run build` | Create the production frontend build |
 | `npm run lint` | Run static linting |
-| `npm test` | Run the Vitest contract checks |
+| `npm test` | Run the Python backend tests |

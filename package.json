@@ -5,32 +5,17 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "server": "node server/index.js",
+    "server": "python -m uvicorn app.main:app --app-dir backend --host 0.0.0.0 --port 3001 --reload",
     "dev:full": "concurrently \"npm run server\" \"npm run dev\"",
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "python -m pytest backend/tests"
   },
   "dependencies": {
-    "@electric-sql/pglite": "^0.5.6",
-    "@huggingface/transformers": "^4.2.0",
-    "bcryptjs": "^3.0.3",
-    "cors": "^2.8.6",
-    "dotenv": "^17.4.2",
-    "express": "^5.2.1",
-    "express-rate-limit": "^8.6.2",
-    "ffmpeg-static": "^5.3.0",
-    "helmet": "^8.3.0",
-    "jsonwebtoken": "^9.0.3",
     "lucide-react": "^1.33.0",
-    "multer": "^2.2.0",
-    "openai": "^7.5.0",
-    "pdfkit": "^0.20.0",
-    "pg": "^8.23.0",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8",
-    "zod": "^4.4.3"
+    "react-dom": "^19.2.8"
   },
   "devDependencies": {
     "@types/react": "^19.2.17",
@@ -39,13 +24,7 @@
     "concurrently": "^10.0.5",
     "marked": "^18.0.11",
     "oxlint": "^1.75.0",
-    "supertest": "^7.2.2",
     "vite": "^8.2.0",
     "vitest": "^4.1.11"
-  },
-  "overrides": {
-    "onnxruntime-node": "1.29.0",
-    "adm-zip": "0.6.0",
-    "sharp": "0.35.4"
   }
 }

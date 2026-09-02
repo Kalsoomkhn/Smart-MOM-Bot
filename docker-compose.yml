@@ -16,9 +16,9 @@ services:
     build: { context: ., dockerfile: Dockerfile.api }
     restart: unless-stopped
     environment:
-      NODE_ENV: production
+      ENVIRONMENT: production
       PORT: 3001
-      DATABASE_URL: postgresql://${POSTGRES_USER:-smartmom}:${POSTGRES_PASSWORD:-smartmom_local_password}@database:5432/${POSTGRES_DB:-smartmom}
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-smartmom}:${POSTGRES_PASSWORD:-smartmom_local_password}@database:5432/${POSTGRES_DB:-smartmom}
       JWT_SECRET: ${JWT_SECRET:-change-this-before-production}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_TRANSCRIPTION_MODEL: ${OPENAI_TRANSCRIPTION_MODEL:-gpt-4o-transcribe-diarize}
@@ -28,10 +28,9 @@ services:
       WHISPER_CPP_PATH: /app/tools/whisper/whisper-cli
       WHISPER_MODEL_PATH: /app/models/ggml-small.en-tdrz.bin
       WHISPER_LANGUAGE: ${WHISPER_LANGUAGE:-en}
-      HF_MODEL_CACHE: /app/models/huggingface
-      LOCAL_MINUTES_MODEL: ${LOCAL_MINUTES_MODEL:-onnx-community/Qwen2.5-1.5B-Instruct}
-      LOCAL_SENTIMENT_MODEL: ${LOCAL_SENTIMENT_MODEL:-Xenova/distilbert-base-uncased-finetuned-sst-2-english}
-      LOCAL_MODEL_DTYPE: ${LOCAL_MODEL_DTYPE:-q4}
+      HF_HOME: /app/models/huggingface
+      LOCAL_MINUTES_MODEL: ${LOCAL_MINUTES_MODEL:-Qwen/Qwen2.5-1.5B-Instruct}
+      LOCAL_SENTIMENT_MODEL: ${LOCAL_SENTIMENT_MODEL:-distilbert/distilbert-base-uncased-finetuned-sst-2-english}
       UPLOAD_DIR: /app/uploads
       CLIENT_ORIGIN: ${CLIENT_ORIGIN:-http://localhost:8080}
     volumes: [uploads_data:/app/uploads, model_cache:/app/models/huggingface]
