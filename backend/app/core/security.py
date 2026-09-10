@@ -1,6 +1,15 @@
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
+import bcrypt
+
+if not hasattr(bcrypt, "__about__"):
+
+    class _About:
+        __version__ = getattr(bcrypt, "__version__", "4.0.0")
+
+    bcrypt.__about__ = _About()
+
 import jwt
 from passlib.context import CryptContext
 
@@ -24,7 +33,11 @@ def verify_password(password: str, password_hash: str) -> bool:
 def create_token(user_id: str, email: str) -> str:
     settings = get_settings()
     expires = datetime.now(timezone.utc) + timedelta(hours=settings.jwt_expiry_hours)
-    return jwt.encode({"sub": user_id, "email": email, "exp": expires}, settings.jwt_secret, algorithm="HS256")
+    return jwt.encode(
+        {"sub": user_id, "email": email, "exp": expires},
+        settings.jwt_secret,
+        algorithm="HS256",
+    )
 
 
 def decode_token(token: str) -> dict:

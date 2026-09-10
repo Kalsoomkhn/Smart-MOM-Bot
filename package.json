@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "server": "python -m uvicorn app.main:app --app-dir backend --host 0.0.0.0 --port 3001 --reload",
+    "server": "python -u backend/run_server.py",
     "dev:full": "concurrently \"npm run server\" \"npm run dev\"",
     "build": "vite build",
     "lint": "oxlint",

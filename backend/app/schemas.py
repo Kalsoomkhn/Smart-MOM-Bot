@@ -1,20 +1,33 @@
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from email_validator import EmailNotValidError, validate_email
+from pydantic import AfterValidator, BaseModel, Field
 
 
+def _clean_email(v: str) -> str:
+    if not isinstance(v, str) or "@" not in v:
+        raise ValueError("An email address must contain @.")
+    try:
+        return validate_email(
+            v.strip(), check_deliverability=False, test_environment=True
+        ).normalized
+    except EmailNotValidError as e:
+        raise ValueError(str(e))
+
+
+ValidEmail = Annotated[str, AfterValidator(_clean_email)]
 Role = Literal["organizer", "participant"]
 
 
 class RegisterRequest(BaseModel):
     name: str = Field(min_length=1, max_length=150)
-    email: EmailStr
+    email: ValidEmail
     password: str = Field(min_length=10)
     role: Role = "organizer"
 
 
 class LoginRequest(BaseModel):
-    email: EmailStr
+    email: ValidEmail
     password: str
 
 

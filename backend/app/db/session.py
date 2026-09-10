@@ -8,14 +8,34 @@ from app.core.config import get_settings
 from app.db.models import Base
 
 settings = get_settings()
-if settings.database_url.startswith("sqlite"):
+db_url = settings.database_url
+if db_url.startswith("postgresql://"):
+    db_url = db_url.replace("postgresql://", "postgresql+psycopg://", 1)
+
+if db_url.startswith("sqlite"):
     Path(".data").mkdir(exist_ok=True)
 
-engine = create_engine(
-    settings.database_url,
-    connect_args={"check_same_thread": False} if settings.database_url.startswith("sqlite") else {},
-    pool_pre_ping=True,
-)
+try:
+    engine = create_engine(
+        db_url,
+        connect_args={"check_same_thread": False}
+        if db_url.startswith("sqlite")
+        else {"connect_timeout": 1},
+        pool_pre_ping=True,
+    )
+    # Test connection
+    with engine.connect() as conn:
+        pass
+except Exception:  # noqa: BLE001
+    # Fallback to local SQLite if PostgreSQL connection fails
+    Path(".data").mkdir(exist_ok=True)
+    db_url = "sqlite:///./.data/smartmom.db"
+    engine = create_engine(
+        db_url,
+        connect_args={"check_same_thread": False},
+        pool_pre_ping=True,
+    )
+
 SessionLocal = sessionmaker(bind=engine, expire_on_commit=False)
 
 
