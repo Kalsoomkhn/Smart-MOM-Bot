@@ -37,14 +37,22 @@ async function api(path, opts = {}) {
       ...opts,
       headers: {
         ...(opts.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
-        ...(token ? { Authorization: `Bearer ${token}` } : {})
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(opts.headers || {})
       }
     })
   } catch {
     throw Error('Cannot reach the SmartMOM server. Check that the API is running and try again.')
   }
   const data = response.headers.get('content-type')?.includes('json') ? await response.json() : null
-  if (!response.ok) throw Error(data?.error || `Request failed with status ${response.status}.`)
+  if (!response.ok) {
+    if (response.status === 401 && path !== '/auth/login' && path !== '/auth/register') {
+      localStorage.removeItem('smartmom_token')
+      localStorage.removeItem('smartmom_user')
+      window.dispatchEvent(new CustomEvent('smartmom:auth-error', { detail: data?.error || 'Authentication required.' }))
+    }
+    throw Error(data?.error || `Request failed with status ${response.status}.`)
+  }
   return data
 }
 
@@ -76,6 +84,17 @@ export default function App() {
 
   const current = meetings.find((meeting) => meeting.id === selected)
   const isOrganizer = current?.access_role === 'organizer'
+
+  useEffect(() => {
+    function handleAuthError(e) {
+      setUser(null)
+      setMeetings([])
+      setSelected(undefined)
+      setNotice(e.detail || 'Session expired. Please sign in again.')
+    }
+    window.addEventListener('smartmom:auth-error', handleAuthError)
+    return () => window.removeEventListener('smartmom:auth-error', handleAuthError)
+  }, [])
 
   const loadMeetings = useCallback(async (selectFirst = false) => {
     try {
@@ -261,9 +280,16 @@ export default function App() {
   async function exportPdf() {
     if (!current) return setNotice('Select a meeting before exporting PDF minutes.')
     try {
+      const token = localStorage.getItem('smartmom_token')
       const response = await fetch(`/api/meetings/${selected}/export.pdf`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('smartmom_token')}` }
+        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) }
       })
+      if (response.status === 401) {
+        localStorage.removeItem('smartmom_token')
+        localStorage.removeItem('smartmom_user')
+        window.dispatchEvent(new CustomEvent('smartmom:auth-error', { detail: 'Session expired. Please sign in again.' }))
+        return
+      }
       if (!response.ok) throw Error('PDF export failed.')
       const url = URL.createObjectURL(await response.blob())
       const link = document.createElement('a')

@@ -2,7 +2,7 @@ from typing import Annotated, Any
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jwt import InvalidTokenError
+from jwt import PyJWTError
 from sqlalchemy.orm import Session
 
 from app.core.security import decode_token
@@ -29,7 +29,7 @@ def get_current_user(
     try:
         payload: dict[str, Any] = decode_token(token)
         user_id: str = payload["sub"]
-    except (KeyError, InvalidTokenError):
+    except (KeyError, PyJWTError, ValueError):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Authentication required.",
