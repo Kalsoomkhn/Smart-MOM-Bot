@@ -31,19 +31,28 @@ class AuthService:
             )
         )
         self.db.commit()
+        token = create_token(user.id, user.email)
         return {
-            "token": create_token(user.id, user.email),
+            "access_token": token,
+            "token_type": "bearer",
+            "token": token,
             "user": user_dict(user),
         }
 
     def login(self, request: LoginRequest) -> dict[str, Any]:
-        user = self.users.by_email(request.email.lower().strip())
-        if not user or not verify_password(request.password, user.password_hash):
+        return self.login_credentials(request.email, request.password)
+
+    def login_credentials(self, email: str, password: str) -> dict[str, Any]:
+        user = self.users.by_email(email.lower().strip())
+        if not user or not verify_password(password, user.password_hash):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid email or password.",
             )
+        token = create_token(user.id, user.email)
         return {
-            "token": create_token(user.id, user.email),
+            "access_token": token,
+            "token_type": "bearer",
+            "token": token,
             "user": user_dict(user),
         }

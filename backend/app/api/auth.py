@@ -1,6 +1,6 @@
 from typing import Any
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, HTTPException, Request, status
 
 from app.api.dependencies import CurrentUser, Db
 from app.repositories import user_dict
@@ -16,8 +16,23 @@ def register(request: RegisterRequest, db: Db) -> dict[str, Any]:
 
 
 @router.post("/login")
-def login(request: LoginRequest, db: Db) -> dict[str, Any]:
-    return AuthService(db).login(request)
+async def login(request: Request, db: Db) -> dict[str, Any]:
+    content_type = request.headers.get("content-type", "")
+    if "application/x-www-form-urlencoded" in content_type or "multipart/form-data" in content_type:
+        form = await request.form()
+        email = str(form.get("username") or form.get("email") or "").strip()
+        password = str(form.get("password") or "")
+    else:
+        try:
+            body = await request.json()
+            email = str(body.get("email") or body.get("username") or "").strip()
+            password = str(body.get("password") or "")
+        except Exception:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid login request body.",
+            )
+    return AuthService(db).login_credentials(email, password)
 
 
 @router.get("/me")
