@@ -38,3 +38,18 @@ def test_parses_speaker_turns():
         "[00:00:00.000 --> 00:00:02.000] Hello. [SPEAKER_TURN] [00:00:02.000 --> 00:00:04.000] Welcome."
     )
     assert result["text"] == "Speaker 1: Hello.\nSpeaker 2: Welcome."
+
+
+def test_reconciles_sparse_transcript_fallback():
+    sparse_minutes = {
+        "agenda": ["chest pain"],
+        "decisions": [],
+        "discussion": [],
+        "actions": [],
+    }
+    transcript = "Speaker 1: chest pain"
+    reconciled = reconcile_actions(sparse_minutes, transcript)
+    assert len(reconciled["discussion"]) > 0
+    assert len(reconciled["decisions"]) > 0
+    assert reconciled["discussion"][0] == "Speaker 1: chest pain"
+

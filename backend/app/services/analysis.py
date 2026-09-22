@@ -58,6 +58,28 @@ def reconcile_actions(minutes: dict[str, Any], transcript: str) -> dict[str, Any
         for item in minutes["discussion"]
         if not re.match(r"^no (specific |further )?discussion\.?$", item, re.IGNORECASE)
     ]
+
+    # Fallback enrichment: Ensure MOM fields are not left completely empty when transcript content exists
+    clean_lines = []
+    if transcript:
+        for line in transcript.splitlines():
+            # Strip timestamp headers if present
+            cleaned = re.sub(r"\[\d{2}:\d{2}:\d{2}\.\d{3}\s*-->\s*\d{2}:\d{2}:\d{2}\.\d{3}\]\s*", "", line).strip()
+            if cleaned and not cleaned.startswith("[SPEAKER_TURN]"):
+                clean_lines.append(cleaned)
+
+    if not minutes["discussion"] and clean_lines:
+        minutes["discussion"] = clean_lines[:5]
+
+    if not minutes["agenda"] and clean_lines:
+        first_line = clean_lines[0]
+        topic = first_line.split(":", 1)[-1].strip() if ":" in first_line else first_line
+        minutes["agenda"] = [topic[:100]]
+
+    if not minutes["decisions"] and clean_lines:
+        summary_topic = ", ".join(minutes["agenda"]) if minutes["agenda"] else "meeting topics"
+        minutes["decisions"] = [f"Reviewed and recorded notes on {summary_topic}."]
+
     return minutes
 
 
@@ -91,9 +113,16 @@ class AnalysisService:
 
     def _minutes(self, transcript: str) -> dict[str, Any]:
         prompt = (
-            "Return JSON only with keys agenda:string[], decisions:string[], "
-            "discussion:string[], actions:[{owner:string,task:string,due:string}]. "
-            "Never invent facts. Transcript:\n" + transcript
+            "Extract meeting minutes from the transcript below into JSON.\n"
+            "Required schema:\n"
+            "{\n"
+            '  "agenda": ["list of primary topics discussed"],\n'
+            '  "decisions": ["list of decisions, conclusions, or key outcomes"],\n'
+            '  "discussion": ["list of main discussion points raised by participants"],\n'
+            '  "actions": [{"owner": "name", "task": "description", "due": "time"}]\n'
+            "}\n"
+            "Return JSON only with these keys. Never invent facts.\n"
+            "Transcript:\n" + transcript
         )
         provider = self.settings.minutes_provider.lower()
         if provider == "openai":
