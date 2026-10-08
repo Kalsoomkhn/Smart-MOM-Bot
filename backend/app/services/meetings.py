@@ -43,9 +43,7 @@ class MeetingService:
     def list(self, user_id: str) -> list[dict[str, Any]]:
         return [meeting_dict(*row) for row in self.meetings.list_for(user_id)]
 
-    async def create(
-        self, user_id: str, audio: UploadFile, title: str | None
-    ) -> dict[str, Any]:
+    async def create(self, user_id: str, audio: UploadFile, title: str | None) -> dict[str, Any]:
         if audio.content_type not in self.allowed_audio:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -99,9 +97,7 @@ class MeetingService:
         meeting.status = "transcribing"
         self.db.commit()
         try:
-            result = TranscriptionService(self.settings).transcribe(
-                Path(meeting.audio_path)
-            )
+            result = TranscriptionService(self.settings).transcribe(Path(meeting.audio_path))
             meeting.transcript = result["text"]
             meeting.status = "transcribed"
             self.db.commit()
@@ -120,8 +116,7 @@ class MeetingService:
             )
         result = AnalysisService(self.settings).analyze(meeting.transcript)
         summary = {
-            key: result.get(key, [])
-            for key in ("agenda", "decisions", "discussion", "actions")
+            key: result.get(key, []) for key in ("agenda", "decisions", "discussion", "actions")
         }
         meeting.summary = summary
         meeting.analysis = result.get("sentiment", {})

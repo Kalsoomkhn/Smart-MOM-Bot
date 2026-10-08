@@ -1,5 +1,5 @@
-import sys
 import logging
+import sys
 from pathlib import Path
 
 # Ensure backend directory is in path
@@ -10,9 +10,7 @@ log_dir.mkdir(exist_ok=True)
 log_file = log_dir / "server_debug.log"
 
 logging.basicConfig(
-    filename=str(log_file),
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s"
+    filename=str(log_file), level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
 logging.info("Starting Python server launcher...")
@@ -20,7 +18,8 @@ logging.info("Starting Python server launcher...")
 try:
     import uvicorn
     from app.main import app
+
     logging.info("Imported app successfully. Launching uvicorn on port 3001...")
     uvicorn.run(app, host="127.0.0.1", port=3001, log_level="info")
-except Exception as e:
+except Exception:
     logging.exception("Failed to start server")

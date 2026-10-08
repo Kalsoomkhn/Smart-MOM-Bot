@@ -8,7 +8,10 @@
     "server": "python -u backend/run_server.py",
     "dev:full": "concurrently \"npm run server\" \"npm run dev\"",
     "build": "vite build",
-    "lint": "oxlint",
+    "lint": "npm run lint:web && npm run lint:python",
+    "lint:web": "oxlint",
+    "lint:python": "python -m ruff check backend scripts experiments",
+    "format:python": "python -m ruff format backend scripts experiments",
     "preview": "vite preview",
     "test": "python -m pytest backend/tests"
   },

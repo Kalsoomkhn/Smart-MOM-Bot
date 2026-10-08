@@ -12,9 +12,7 @@ def test_normalizes_model_output():
         "agenda": ["Review progress"],
         "decisions": [],
         "discussion": [],
-        "actions": [
-            {"owner": "Unassigned", "task": "Run tests", "due": "Not specified"}
-        ],
+        "actions": [{"owner": "Unassigned", "task": "Run tests", "due": "Not specified"}],
     }
 
 
@@ -26,9 +24,9 @@ def test_grounds_action_owner():
         "actions": [{"owner": "Speaker 1", "task": "Run tests", "due": "Thursday"}],
     }
     assert (
-        reconcile_actions(minutes, "Speaker 1: Ali will run tests by Thursday.")[
-            "actions"
-        ][0]["owner"]
+        reconcile_actions(minutes, "Speaker 1: Ali will run tests by Thursday.")["actions"][0][
+            "owner"
+        ]
         == "Ali"
     )
 
@@ -52,4 +50,3 @@ def test_reconciles_sparse_transcript_fallback():
     assert len(reconciled["discussion"]) > 0
     assert len(reconciled["decisions"]) > 0
     assert reconciled["discussion"][0] == "Speaker 1: chest pain"
-

@@ -17,6 +17,8 @@ dist-ssr
 tools/whisper/
 models/*.bin
 models/huggingface/
+experiments/data/
+experiments/results/
 
 # Editor directories and files
 .vscode/*

@@ -52,9 +52,7 @@ def test_pipeline_scenarios_evaluation() -> None:
         parsed_transcript = speaker_turns_to_transcript(scenario["raw_dialogue"])
         transcript_text = parsed_transcript["text"]
 
-        assert transcript_text.strip(), (
-            f"Transcript parsing failed for {scenario['id']}"
-        )
+        assert transcript_text.strip(), f"Transcript parsing failed for {scenario['id']}"
 
         # Test Sentiment & Engagement analysis
         sentiment_res = service._sentiment(transcript_text)

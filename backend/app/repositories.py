@@ -38,8 +38,7 @@ class MeetingRepository:
             )
             .outerjoin(
                 MeetingMember,
-                (MeetingMember.meeting_id == Meeting.id)
-                & (MeetingMember.user_id == user_id),
+                (MeetingMember.meeting_id == Meeting.id) & (MeetingMember.user_id == user_id),
             )
             .where(
                 Meeting.id == meeting_id,
@@ -62,8 +61,7 @@ class MeetingRepository:
             )
             .outerjoin(
                 MeetingMember,
-                (MeetingMember.meeting_id == Meeting.id)
-                & (MeetingMember.user_id == user_id),
+                (MeetingMember.meeting_id == Meeting.id) & (MeetingMember.user_id == user_id),
             )
             .where(or_(Meeting.owner_id == user_id, MeetingMember.user_id == user_id))
             .order_by(Meeting.created_at.desc())
@@ -84,9 +82,7 @@ class MeetingRepository:
         if member:
             member.access_role = role
         else:
-            self.db.add(
-                MeetingMember(meeting_id=meeting_id, user_id=user_id, access_role=role)
-            )
+            self.db.add(MeetingMember(meeting_id=meeting_id, user_id=user_id, access_role=role))
 
     def add_version(self, version: MeetingVersion) -> None:
         self.db.add(version)

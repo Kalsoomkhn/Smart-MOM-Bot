@@ -86,7 +86,7 @@ Install Python 3.12, then create a virtual environment and install the backend d
 
 ```powershell
 py -3.12 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r backend\requirements.txt
+.\.venv\Scripts\python.exe -m pip install -r backend\requirements-dev.txt
 ```
 
 The frontend runs on Vite's displayed local URL and proxies API requests to port `3001`. When `DATABASE_URL` is not set, the API uses persistent SQLite storage under `.data/` for local development. Docker uses PostgreSQL. The Python backend is organized under `backend/app` into API adapters, services, repositories, database models, schemas, and core configuration.
@@ -130,5 +130,7 @@ The frontend runs on Vite's displayed local URL and proxies API requests to port
 | `npm run server` | Start the Python FastAPI server |
 | `npm run dev:full` | Start frontend and API together |
 | `npm run build` | Create the production frontend build |
-| `npm run lint` | Run static linting |
+| `npm run lint` | Run frontend and Python static linting |
+| `npm run lint:python` | Check Python code with Ruff |
+| `npm run format:python` | Format Python code with Ruff |
 | `npm test` | Run the Python backend tests |

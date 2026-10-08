@@ -26,9 +26,7 @@ class Settings(BaseSettings):
     whisper_model_path: Path = Path("./models/ggml-small.en-tdrz.bin")
     whisper_language: str = "en"
     local_minutes_model: str = "Qwen/Qwen2.5-1.5B-Instruct"
-    local_sentiment_model: str = (
-        "distilbert/distilbert-base-uncased-finetuned-sst-2-english"
-    )
+    local_sentiment_model: str = "distilbert/distilbert-base-uncased-finetuned-sst-2-english"
     local_minutes_max_tokens: int = 700
 
     @property

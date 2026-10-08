@@ -1,8 +1,8 @@
-from dataclasses import dataclass
 import json
-from pathlib import Path
 import sys
 import time
+from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "backend"))
@@ -44,7 +44,11 @@ SCENARIOS: list[Scenario] = [
             ],
             "actions": [
                 {"owner": "Bilal", "task": "optimize database session pooling", "due": "Friday"},
-                {"owner": "Kalsoom Khan", "task": "prepare final supervisor demo script and evaluation metrics", "due": "next Tuesday"},
+                {
+                    "owner": "Kalsoom Khan",
+                    "task": "prepare final supervisor demo script and evaluation metrics",
+                    "due": "next Tuesday",
+                },
             ],
         },
     ),
@@ -59,7 +63,10 @@ SCENARIOS: list[Scenario] = [
 [SPEAKER_TURN] [00:00:16.000 --> 00:00:22.000] Alex: Alex will update the Figma UI mockups by Wednesday.
 [SPEAKER_TURN] [00:00:22.000 --> 00:00:28.000] Daniel: Daniel is going to write the user onboarding documentation before the product launch.""",
         mock_llm_minutes={
-            "agenda": ["Review user feedback on dashboard UI", "Align on PDF export button placement"],
+            "agenda": [
+                "Review user feedback on dashboard UI",
+                "Align on PDF export button placement",
+            ],
             "decisions": [
                 "Add quick export PDF button directly on transcript header",
                 "Maintain default dark mode user theme",
@@ -70,7 +77,11 @@ SCENARIOS: list[Scenario] = [
             ],
             "actions": [
                 {"owner": "Alex", "task": "update Figma UI mockups", "due": "Wednesday"},
-                {"owner": "Daniel", "task": "write user onboarding documentation", "due": "before product launch"},
+                {
+                    "owner": "Daniel",
+                    "task": "write user onboarding documentation",
+                    "due": "before product launch",
+                },
             ],
         },
     ),
@@ -94,7 +105,11 @@ SCENARIOS: list[Scenario] = [
                 "Mark detailed audit logging integration for compliance.",
             ],
             "actions": [
-                {"owner": "Mark", "task": "configure audit logging pipeline for GDPR compliance", "due": "end of month"},
+                {
+                    "owner": "Mark",
+                    "task": "configure audit logging pipeline for GDPR compliance",
+                    "due": "end of month",
+                },
             ],
         },
     ),
@@ -108,7 +123,10 @@ SCENARIOS: list[Scenario] = [
 [SPEAKER_TURN] [00:00:12.000 --> 00:00:18.000] Hassan: Hassan must enable pool_pre_ping and automated reconnects in SQLAlchemy by tomorrow morning.
 [SPEAKER_TURN] [00:00:18.000 --> 00:00:24.000] Priya: Priya will deploy the zero-downtime hotfix patch to production by 4 PM.""",
         mock_llm_minutes={
-            "agenda": ["Database connection drop incident investigation", "Preventative hotfix deployment"],
+            "agenda": [
+                "Database connection drop incident investigation",
+                "Preventative hotfix deployment",
+            ],
             "decisions": [
                 "Enable pool_pre_ping automatic health checks in SQLAlchemy engine setup",
                 "Deploy zero-downtime emergency hotfix to production server",
@@ -118,8 +136,16 @@ SCENARIOS: list[Scenario] = [
                 "Hassan proposed database driver reconnect parameters.",
             ],
             "actions": [
-                {"owner": "Hassan", "task": "enable pool_pre_ping and automated reconnects", "due": "tomorrow morning"},
-                {"owner": "Priya", "task": "deploy zero-downtime hotfix patch to production", "due": "4 PM"},
+                {
+                    "owner": "Hassan",
+                    "task": "enable pool_pre_ping and automated reconnects",
+                    "due": "tomorrow morning",
+                },
+                {
+                    "owner": "Priya",
+                    "task": "deploy zero-downtime hotfix patch to production",
+                    "due": "4 PM",
+                },
             ],
         },
     ),
@@ -143,8 +169,16 @@ SCENARIOS: list[Scenario] = [
                 "Chloe outlined content timeline for launch communications.",
             ],
             "actions": [
-                {"owner": "Chloe", "task": "draft promotional email newsletter and blog post", "due": "Monday"},
-                {"owner": "Ryan", "task": "coordinate with enterprise trial users for testimonial recording", "due": "Friday"},
+                {
+                    "owner": "Chloe",
+                    "task": "draft promotional email newsletter and blog post",
+                    "due": "Monday",
+                },
+                {
+                    "owner": "Ryan",
+                    "task": "coordinate with enterprise trial users for testimonial recording",
+                    "due": "Friday",
+                },
             ],
         },
     ),
@@ -175,16 +209,10 @@ def run_evaluation() -> dict[str, Any]:
 
         # Compute accuracy scores
         expected_owners = [
-            a["owner"]
-            for a in sc.mock_llm_minutes["actions"]
-            if a["owner"] != "Unassigned"
+            a["owner"] for a in sc.mock_llm_minutes["actions"] if a["owner"] != "Unassigned"
         ]
         reconciled_owners = [a["owner"] for a in reconciled["actions"]]
-        grounding_accuracy = (
-            100.0
-            if expected_owners == reconciled_owners
-            else 85.0
-        )
+        grounding_accuracy = 100.0 if expected_owners == reconciled_owners else 85.0
 
         evaluations.append(
             {
@@ -203,9 +231,7 @@ def run_evaluation() -> dict[str, Any]:
         )
 
     total_elapsed = round(time.time() - start_total_time, 3)
-    avg_latency = round(
-        sum(item["latency_ms"] for item in evaluations) / len(evaluations), 2
-    )
+    avg_latency = round(sum(item["latency_ms"] for item in evaluations) / len(evaluations), 2)
 
     report = {
         "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),

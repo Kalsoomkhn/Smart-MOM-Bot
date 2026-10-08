@@ -43,9 +43,7 @@ def reconcile_actions(minutes: dict[str, Any], transcript: str) -> dict[str, Any
         explicit.append((owner, words))
 
     for action in minutes["actions"]:
-        words = {
-            word for word in re.split(r"\W+", action["task"].lower()) if len(word) > 3
-        }
+        words = {word for word in re.split(r"\W+", action["task"].lower()) if len(word) > 3}
         evidence = next(
             (owner for owner, candidate in explicit if words & candidate),
             None,
@@ -64,7 +62,9 @@ def reconcile_actions(minutes: dict[str, Any], transcript: str) -> dict[str, Any
     if transcript:
         for line in transcript.splitlines():
             # Strip timestamp headers if present
-            cleaned = re.sub(r"\[\d{2}:\d{2}:\d{2}\.\d{3}\s*-->\s*\d{2}:\d{2}:\d{2}\.\d{3}\]\s*", "", line).strip()
+            cleaned = re.sub(
+                r"\[\d{2}:\d{2}:\d{2}\.\d{3}\s*-->\s*\d{2}:\d{2}:\d{2}\.\d{3}\]\s*", "", line
+            ).strip()
             if cleaned and not cleaned.startswith("[SPEAKER_TURN]"):
                 clean_lines.append(cleaned)
 
@@ -127,9 +127,7 @@ class AnalysisService:
         provider = self.settings.minutes_provider.lower()
         if provider == "openai":
             if not self.settings.openai_api_key:
-                raise ValueError(
-                    "OPENAI_API_KEY is required when MINUTES_PROVIDER=openai."
-                )
+                raise ValueError("OPENAI_API_KEY is required when MINUTES_PROVIDER=openai.")
             client = OpenAI(api_key=self.settings.openai_api_key)
             response = client.responses.create(
                 model=self.settings.openai_summary_model,
@@ -147,9 +145,7 @@ class AnalysisService:
             raw = output[0]["generated_text"][len(prompt) :]
             mode = "local-qwen"
         else:
-            raise ValueError(
-                f"Unsupported minutes provider: {self.settings.minutes_provider}"
-            )
+            raise ValueError(f"Unsupported minutes provider: {self.settings.minutes_provider}")
 
         normalized = normalize_minutes(_json_object(raw))
         reconciled = reconcile_actions(normalized, transcript)
@@ -173,9 +169,7 @@ class AnalysisService:
                 existing = speakers.get(name_clean, "")
                 speakers[name_clean] = f"{existing} {text_clean}".strip()
 
-        classifier = _pipeline(
-            "sentiment-analysis", self.settings.local_sentiment_model
-        )
+        classifier = _pipeline("sentiment-analysis", self.settings.local_sentiment_model)
         total_words = sum(len(text.split()) for text in speakers.values()) or 1
         participants: list[dict[str, Any]] = []
         signed_score = 0.0

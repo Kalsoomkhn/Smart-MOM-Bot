@@ -60,9 +60,7 @@ def invite(
     manager = get_service(db)
     meeting, _ = manager.accessible(meeting_id, user.id, organizer=True)
     raw = request.emails or (request.email or "").split(",")
-    emails = list(
-        dict.fromkeys(email.lower().strip() for email in raw if email.strip())
-    )[:20]
+    emails = list(dict.fromkeys(email.lower().strip() for email in raw if email.strip()))[:20]
     if not emails:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

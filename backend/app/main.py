@@ -51,11 +51,7 @@ async def http_error(_: Request, exc: HTTPException) -> JSONResponse:
 
 @app.exception_handler(RequestValidationError)
 async def validation_error(_: Request, exc: RequestValidationError) -> JSONResponse:
-    msg = (
-        exc.errors()[0].get("msg", "Invalid request.")
-        if exc.errors()
-        else "Invalid request."
-    )
+    msg = exc.errors()[0].get("msg", "Invalid request.") if exc.errors() else "Invalid request."
     return JSONResponse(
         content={"error": msg},
         status_code=status.HTTP_400_BAD_REQUEST,

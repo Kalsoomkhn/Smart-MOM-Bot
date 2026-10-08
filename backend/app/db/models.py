@@ -15,17 +15,13 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(320), unique=True, index=True)
     password_hash: Mapped[str] = mapped_column(Text)
     role: Mapped[str] = mapped_column(String(20), default="organizer")
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class Meeting(Base):
     __tablename__ = "meetings"
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    owner_id: Mapped[str] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"), index=True
-    )
+    owner_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     title: Mapped[str] = mapped_column(String(150))
     status: Mapped[str] = mapped_column(String(30), default="uploaded")
     audio_path: Mapped[str | None] = mapped_column(Text)
@@ -33,9 +29,7 @@ class Meeting(Base):
     transcript: Mapped[str] = mapped_column(Text, default="")
     summary: Mapped[dict | None] = mapped_column(JSON)
     analysis: Mapped[dict | None] = mapped_column(JSON)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
@@ -50,33 +44,23 @@ class MeetingMember(Base):
         ForeignKey("users.id", ondelete="CASCADE"), primary_key=True, index=True
     )
     access_role: Mapped[str] = mapped_column(String(20), default="participant")
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class MeetingVersion(Base):
     __tablename__ = "meeting_versions"
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    meeting_id: Mapped[str] = mapped_column(
-        ForeignKey("meetings.id", ondelete="CASCADE")
-    )
+    meeting_id: Mapped[str] = mapped_column(ForeignKey("meetings.id", ondelete="CASCADE"))
     editor_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
     summary: Mapped[dict] = mapped_column(JSON)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class Feedback(Base):
     __tablename__ = "feedback"
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    meeting_id: Mapped[str] = mapped_column(
-        ForeignKey("meetings.id", ondelete="CASCADE")
-    )
+    meeting_id: Mapped[str] = mapped_column(ForeignKey("meetings.id", ondelete="CASCADE"))
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
     rating: Mapped[int] = mapped_column(Integer)
     comment: Mapped[str] = mapped_column(Text, default="")
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

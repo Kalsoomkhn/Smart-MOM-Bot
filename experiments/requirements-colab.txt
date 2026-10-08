@@ -1,0 +1,8 @@
+accelerate==1.10.1
+jiwer==4.0.0
+pyannote.core==6.0.1
+pyannote.metrics==4.0.0
+transformers==4.56.2
+
+# Sortformer requires the current NeMo source build recommended by NVIDIA's model card.
+nemo_toolkit[asr] @ git+https://github.com/NVIDIA/NeMo.git@main

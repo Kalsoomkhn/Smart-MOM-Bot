@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException, Request, status
 
 from app.api.dependencies import CurrentUser, Db
 from app.repositories import user_dict
-from app.schemas import LoginRequest, RegisterRequest, RoleRequest
+from app.schemas import RegisterRequest, RoleRequest
 from app.services.auth import AuthService
 
 router = APIRouter(prefix="/auth", tags=["authentication"])

@@ -1,5 +1,5 @@
-from fastapi.testclient import TestClient
 from app.main import app
+from fastapi.testclient import TestClient
 
 client = TestClient(app)
 
@@ -27,9 +27,7 @@ def test_auth_and_protected_endpoints_flow():
 
     # 3. Access /api/meetings with token
     meetings_resp = client.get("/api/meetings", headers=headers)
-    assert (
-        meetings_resp.status_code == 200
-    ), f"/api/meetings failed: {meetings_resp.text}"
+    assert meetings_resp.status_code == 200, f"/api/meetings failed: {meetings_resp.text}"
     meetings = meetings_resp.json()
     assert isinstance(meetings, list)
 
@@ -75,7 +73,4 @@ def test_oauth2_form_login_and_openapi():
     sec_schemes = schema["components"]["securitySchemes"]
     assert "OAuth2PasswordBearer" in sec_schemes
     assert sec_schemes["OAuth2PasswordBearer"]["type"] == "oauth2"
-    assert (
-        sec_schemes["OAuth2PasswordBearer"]["flows"]["password"]["tokenUrl"]
-        == "/api/auth/login"
-    )
+    assert sec_schemes["OAuth2PasswordBearer"]["flows"]["password"]["tokenUrl"] == "/api/auth/login"

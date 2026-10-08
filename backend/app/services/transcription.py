@@ -68,9 +68,9 @@ class TranscriptionService:
             {"speaker": getattr(x, "speaker", "Unknown Speaker"), "text": x.text}
             for x in raw_segments
         ]
-        formatted_text = "\n".join(
-            f"{x['speaker']}: {x['text']}" for x in segments
-        ) or getattr(result, "text", "")
+        formatted_text = "\n".join(f"{x['speaker']}: {x['text']}" for x in segments) or getattr(
+            result, "text", ""
+        )
         return {
             "text": formatted_text,
             "segments": segments,
@@ -81,20 +81,14 @@ class TranscriptionService:
         try:
             asr = _get_hf_asr_pipeline(self.settings.hf_transcription_model)
             out = asr(str(audio_path), return_timestamps=True)
-            text = (
-                out.get("text", "").strip()
-                if isinstance(out, dict)
-                else str(out).strip()
-            )
+            text = out.get("text", "").strip() if isinstance(out, dict) else str(out).strip()
             raw_chunks = out.get("chunks", []) if isinstance(out, dict) else []
             segments: list[dict[str, str]] = []
             if raw_chunks:
                 for idx, chunk in enumerate(raw_chunks, start=1):
                     chunk_text = chunk.get("text", "").strip()
                     if chunk_text:
-                        segments.append(
-                            {"speaker": f"Speaker {1 + (idx % 2)}", "text": chunk_text}
-                        )
+                        segments.append({"speaker": f"Speaker {1 + (idx % 2)}", "text": chunk_text})
             else:
                 segments = [{"speaker": "Speaker 1", "text": text}]
             return {
